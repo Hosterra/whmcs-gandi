@@ -1,6 +1,6 @@
 <?php
 
-namespace WHMCS\Module\Registrar\Gandiv5;
+namespace WHMCS\Module\Registrar\Gandi;
 
 class LiveDNS
 {
@@ -83,7 +83,7 @@ class LiveDNS
     {
         $url = $this::ENDPOINT . "/domains/{$domain}/records";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'LiveDNS records', $domain, $response);
+        logModuleCall('Gandi Registrar', 'LiveDNS records', $domain, $response);
         return json_decode($response);
     }
 
@@ -101,7 +101,7 @@ class LiveDNS
     {
         $url = $this::ENDPOINT . "/domains/{$domain}/records/{$record->rrset_name}/{$record->rrset_type}";
         $response = $this->sendRequest($url, "DELETE");
-        logModuleCall('Gandi V5', 'LiveDNS delete record', [$domain,$record], $response);
+        logModuleCall('Gandi Registrar', 'LiveDNS delete record', [$domain,$record], $response);
         return json_decode($response);
     }
 
@@ -129,7 +129,7 @@ class LiveDNS
         }
         //var_dump($params);die();
         $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi V5', 'LiveDNS add record', [$domain,$params], $response);
+        logModuleCall('Gandi Registrar', 'LiveDNS add record', [$domain,$params], $response);
         return json_decode($response);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace WHMCS\Module\Registrar\Gandiv5;
+namespace WHMCS\Module\Registrar\Gandi;
 
 class ApiClient
 {
@@ -12,7 +12,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'Domain info', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain info', $domain, $response);
         return json_decode($response);
     }
     
@@ -35,7 +35,7 @@ class ApiClient
             "nameservers" => $nameservers
         ];
         $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi V5', 'Domain register', $params, $response);
+        logModuleCall('Gandi Registrar', 'Domain register', $params, $response);
         return json_decode($response);
     }
 
@@ -59,7 +59,7 @@ class ApiClient
             "authinfo" => $authCode
         ];
         $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi V5', 'Domain transfer', $params, $response);
+        logModuleCall('Gandi Registrar', 'Domain transfer', $params, $response);
         return json_decode($response);
     }
 
@@ -127,7 +127,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/check?name={$domain}";
         $response = json_decode($this->sendRequest($url, "GET"));
-        logModuleCall('Gandi V5', 'Domain availability', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain availability', $domain, $response);
         return $response->products[0]->status;
     }
  
@@ -142,7 +142,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'Domain list', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain list', $domain, $response);
         return json_decode($response);
     }
 
@@ -158,7 +158,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}/contacts";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'Domain availability', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain availability', $domain, $response);
         return json_decode($response);
     }
 
@@ -175,7 +175,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}/nameservers";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'Domain availability', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain availability', $domain, $response);
         return json_decode($response);
     }
 
@@ -199,7 +199,7 @@ class ApiClient
         ];
 
         $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi V5', 'Domain renew', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain renew', $domain, $response);
         return json_decode($response);
     }
 
@@ -220,7 +220,7 @@ class ApiClient
             'nameservers' => $nameservers
         ];
         $response = $this->sendRequest($url, "PUT", $params);
-        logModuleCall('Gandi V5', 'Domain update nameservers', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Domain update nameservers', $domain, $response);
         return json_decode($response);
     }
 
@@ -251,7 +251,7 @@ class ApiClient
             'tech' => $tech
         ];
         $response = $this->sendRequest($url, "PATCH", $params);
-        logModuleCall('Gandi V5', 'Domain update contacts', [$domain,$params], $response);
+        logModuleCall('Gandi Registrar', 'Domain update contacts', [$domain,$params], $response);
         return json_decode($response);
     }
 
@@ -274,7 +274,7 @@ class ApiClient
             'ips' => [$ip]
         ];
         $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi V5', 'Register nameserver', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Register nameserver', $domain, $response);
         return json_decode($response);
     }
 
@@ -291,7 +291,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}/hosts/{$name}";
         $response = $this->sendRequest($url, "DELETE", []);
-        logModuleCall('Gandi V5', 'Delete nameserver', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Delete nameserver', $domain, $response);
         return json_decode($response);
     }
 
@@ -312,7 +312,7 @@ class ApiClient
             'ips' => [$ip]
         ];
         $response = $this->sendRequest($url, "PUT", $params);
-        logModuleCall('Gandi V5', 'Update nameserver', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Update nameserver', $domain, $response);
         return json_decode($response);
     }
 
@@ -374,7 +374,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'LiveDNS info', $domain, $response);
+        logModuleCall('Gandi Registrar', 'LiveDNS info', $domain, $response);
         return json_decode($response);
     }
 
@@ -390,7 +390,7 @@ class ApiClient
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
         $response = $this->sendRequest($url, "POST");
-        logModuleCall('Gandi V5', 'Enable LiveDNS', $domain, $response);
+        logModuleCall('Gandi Registrar', 'Enable LiveDNS', $domain, $response);
         return json_decode($response);
     }
 
@@ -406,7 +406,7 @@ class ApiClient
     public function getOrganizations(){
         $url = "{$this->endPoint}/organization/organizations";
         $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi V5', 'List organizations', $domain, $response);
+        logModuleCall('Gandi Registrar', 'List organizations', $domain, $response);
         return json_decode($response);
     }
 }

@@ -6,8 +6,8 @@ if (!defined("WHMCS")) {
 
 use WHMCS\Domains\DomainLookup\ResultsList;
 use WHMCS\Domains\DomainLookup\SearchResult;
-use WHMCS\Module\Registrar\Gandiv5\ApiClient;
-use WHMCS\Module\Registrar\Gandiv5\LiveDNS;
+use WHMCS\Module\Registrar\Gandi\ApiClient;
+use WHMCS\Module\Registrar\Gandi\LiveDNS;
 
 require_once dirname(__FILE__) . '/lib/LiveDNS.php';
 
@@ -19,11 +19,12 @@ require_once dirname(__FILE__) . '/lib/LiveDNS.php';
  *
  * @return array
  */
-function gandiv5_MetaData()
+function gandi_MetaData()
 {
     return array(
-        'DisplayName' => 'Gandi Registrar Module for WHMCS( V5 API)',
-        'APIVersion' => '1.1',
+	    'DisplayName' => 'Gandi - 5.0.0',
+	    'Description' => 'Blahblah',
+	    'APIVersion' => '1.1',
     );
 }
 
@@ -45,7 +46,7 @@ function gandiv5_MetaData()
  *
  * @return array
  */
-function gandiv5_getConfigArray($params)
+function gandi_getConfigArray($params)
 {
     try{
         $api = new ApiClient($params["apiKey"]);
@@ -103,7 +104,7 @@ function gandiv5_getConfigArray($params)
  *
  * @return array
  */
-function gandiv5_RegisterDomain($params)
+function gandi_RegisterDomain($params)
 {
     if( $params['accountType'] == 'individual' ){
         $organization = '';
@@ -189,7 +190,7 @@ function gandiv5_RegisterDomain($params)
  *
  * @return array
  */
-function gandiv5_TransferDomain($params)
+function gandi_TransferDomain($params)
 {
     $apiKey = $params['API Key'];
     $sld = $params['sld'];
@@ -264,7 +265,7 @@ function gandiv5_TransferDomain($params)
  *
  * @return array
  */
-function gandiv5_RenewDomain($params)
+function gandi_RenewDomain($params)
 {
     $apiKey = $params['API Key'];
     $sld = $params['sld'];
@@ -307,7 +308,7 @@ function gandiv5_RenewDomain($params)
  *
  * @return array
  */
-function gandiv5_GetNameservers($params)
+function gandi_GetNameservers($params)
 {
     $apiKey = $params['API Key'];
     $sld = $params['sld'];
@@ -349,7 +350,7 @@ function gandiv5_GetNameservers($params)
  *
  * @return array
  */
-function gandiv5_SaveNameservers($params)
+function gandi_SaveNameservers($params)
 {
 
     // submitted nameserver values
@@ -376,7 +377,7 @@ function gandiv5_SaveNameservers($params)
         $domain = $sld . '.' . $tld;
         $api = new ApiClient($params["apiKey"]);
         $request = $api->updateDomainNameservers($domain, $nameservers);
-        logModuleCall('Gandi V5', __FUNCTION__, $nameservers, serialize($request));
+        logModuleCall('Gandi Registrar', __FUNCTION__, $nameservers, serialize($request));
         if ((isset($request->code) && $request->code != 202)|| isset($request->errors)) {
             throw new Exception(json_encode($request));
         }
@@ -403,7 +404,7 @@ function gandiv5_SaveNameservers($params)
  *
  * @return array
  */
-function gandiv5_GetContactDetails($params)
+function gandi_GetContactDetails($params)
 {
     try {
         $apiKey = $params['API Key'];
@@ -462,7 +463,7 @@ function gandiv5_GetContactDetails($params)
  *
  * @return array
  */
-function gandiv5_SaveContactDetails($params)
+function gandi_SaveContactDetails($params)
 {
     try {
         $apiKey = $params['API Key'];
@@ -503,7 +504,7 @@ function gandiv5_SaveContactDetails($params)
  *
  * @return \WHMCS\Domains\DomainLookup\ResultsList An ArrayObject based collection of \WHMCS\Domains\DomainLookup\SearchResult results
  */
-function gandiv5_CheckAvailability($params)
+function gandi_CheckAvailability($params)
 {
     try {
         $results = new ResultsList();
@@ -540,7 +541,7 @@ function gandiv5_CheckAvailability($params)
  *
  * @return array DNS Host Records
  */
-function gandiv5_GetDNS($params)
+function gandi_GetDNS($params)
 {
     try {
         $apiKey = $params['API Key'];
@@ -601,7 +602,7 @@ function gandiv5_GetDNS($params)
  *
  * @return array
  */
-function gandiv5_SaveDNS($params)
+function gandi_SaveDNS($params)
 {
     try {
         $apiKey = $params['API Key'];
@@ -646,7 +647,7 @@ function gandiv5_SaveDNS($params)
  *
  * @return array
  */
-function gandiv5_RegisterNameserver($params)
+function gandi_RegisterNameserver($params)
 {
     try {
         $apiKey = $params['API Key'];
@@ -681,7 +682,7 @@ function gandiv5_RegisterNameserver($params)
  *
  * @return array
  */
-function gandiv5_ModifyNameserver($params)
+function gandi_ModifyNameserver($params)
 {
     $apiKey = $params['API Key'];
     $sld = $params['sld'];
@@ -707,7 +708,7 @@ function gandiv5_ModifyNameserver($params)
  *
  * @return array
  */
-function gandiv5_DeleteNameserver($params)
+function gandi_DeleteNameserver($params)
 {
     $apiKey = $params['API Key'];
     $sld = $params['sld'];
@@ -738,7 +739,7 @@ function gandiv5_DeleteNameserver($params)
  *
  * @return array
  */
-function gandiv5_Sync($params)
+function gandi_Sync($params)
 {
     try {
         $domain = $params['domain'];
@@ -775,11 +776,11 @@ function gandiv5_Sync($params)
  *
  * Allows you to define additional actions your module supports.
  * In this example, we register a Push Domain action which triggers
- * the `gandiv5_push` function when invoked.
+ * the `gandi_push` function when invoked.
  *
  * @return array
  */
-function gandiv5_ClientAreaCustomButtonArray()
+function gandi_ClientAreaCustomButtonArray()
 {
     return array(
     );
@@ -793,7 +794,7 @@ function gandiv5_ClientAreaCustomButtonArray()
  *
  * @return array
  */
-function gandiv5_ClientAreaAllowedFunctions()
+function gandi_ClientAreaAllowedFunctions()
 {
     return array(
     );
@@ -812,7 +813,7 @@ function gandiv5_ClientAreaAllowedFunctions()
  *
  * @return string HTML Output
  */
-function gandiv5_ClientArea($params)
+function gandi_ClientArea($params)
 {
     $output = '';
 
@@ -832,7 +833,7 @@ function gandiv5_ClientArea($params)
  * @return array
  *
  */
-function gandiv5_GetEPPCode($params)
+function gandi_GetEPPCode($params)
 {
     try {
         $domain = $params['domainname'];
@@ -863,7 +864,7 @@ function gandiv5_GetEPPCode($params)
  *
  * @return array
  */
-function gandiv5_TransferSync($params)
+function gandi_TransferSync($params)
 {
     try {
         $domain = $params['domain'];

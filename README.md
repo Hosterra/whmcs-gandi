@@ -1,23 +1,26 @@
-**⚠️ DEPRECATION notice**:
-> Hello,
->
-> We have decided not to continue to maintain the WHMCS module project. The existing project will remain as-is. Anyone interested in taking over and forking the project can let us know and we can inform our users and/or link to it.
->
-> If you have any questions, please feel free to [contact our team](https://help.gandi.net/en/contact/feedback).
->
-> Sincerely,
->
-> The Gandi.net team
+# Gandi Registrar for WHMCS
 
-<hr/>
+Use Gandi.net as registrar in WHMCS.
 
-# INSTALL STEPS 
+![PHP 7.x Compatibility](https://img.shields.io/badge/PHP-7.x-7c86b4?style=flat-square) ![WHCMS 8.5.x Compatibility](https://img.shields.io/badge/WHMCS-8.5.x-96be4f?style=flat-square)
 
+## Features
+…
 
-1- Upload the "modules/registrars/gandiv5" folder to your whmcs install "modules/registrars" folder.
+## How to install
+1. In your WHCMS installation, in the `modules/registrars`, create a `gandi` directory.
+2. Download the last [release](https://github.com/Hosterra/whmcs-gandi/releases).
+3. Unzip & copy all files in the `gandi` directory.
+4. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
 
-2- Enable the Gandi.net registrar in "setup->products->domain registrars".
+## How to configure
+1. …
 
-3- Set the production "API key" provided by your  the gandi.net reseller panel.
+## Contributing
 
+Before submitting an issue or a pull request, please read the [contribution guidelines](CONTRIBUTING.md).
 
+> ⚠️ The `master` branch is the current development state of the module. If you want a stable, production-ready version, please pick the last official [release](https://github.com/Hosterra/whmcs-gandi/releases).
+
+## Attribution
+Gandi Registrar for WHMCS is a fork of [Gandi/whmcs_Gandi-module](https://github.com/Gandi/whmcs_Gandi-module) which has been archived during spring 2022. Thank you, Gandi, for starting such a module! 
