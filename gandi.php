@@ -21,11 +21,10 @@ require_once dirname(__FILE__) . '/lib/LiveDNS.php';
  */
 function gandi_MetaData()
 {
-    return array(
-	    'DisplayName' => 'Gandi - 5.0.0',
-	    'Description' => 'Blahblah',
+    return [
+	    'DisplayName' => 'Gandi Registrar',
 	    'APIVersion' => '1.1',
-    );
+    ];
 }
 
 /**
@@ -46,46 +45,53 @@ function gandi_MetaData()
  *
  * @return array
  */
-function gandi_getConfigArray($params)
-{
+function gandi_getConfigArray( $params ) {
     try{
-        $api = new ApiClient($params["apiKey"]);
+        $api              = new ApiClient( $params["apiKey"] );
         $organizationList = [];
-        $organizations = $api->getOrganizations();
-        if( is_array($organizations) ){
-            foreach($organizations as $organization){
+        $organizations    = $api->getOrganizations();
+        if( is_array( $organizations ) ){
+            foreach( $organizations as $organization ){
                 $organizationsList[$organization->id] = $organization->name;
             }
         }
-    }catch(Exception $e){
+    } catch ( Exception $e ) {
+		// How/where to log?
     }
-    return array(
-        // Friendly display name for the module
-        'FriendlyName' => array(
+    return [
+        'FriendlyName' => [
             'Type' => 'System',
-            'Value' => 'Gandi Registrar Module for WHMCS( V5 API)',
-        ),
-        'apiKey' => array(
+            'Value' => 'Gandi Registrar (v5 API)',
+        ],
+        'apiKey' => [
             'FriendlyName' => 'Api Key',
             'Type' => 'password',
             'Size' => '100',
-        ),
+        ],
         'accountType' => [
             'FriendlyName' => 'Account type',
             'Type' => 'dropdown',
-            'Options' => array(
+            'Options' => [
                 'individual' => 'Pay as individual',
                 'organization' => 'Pay as another organization',
                 'reseller' => 'Reseller',
-            ),
+            ],
         ],
         'organization' => [
              'FriendlyName' => 'Organization',
              'Type' => 'dropdown',
              'Options' => $organizationsList,
          ],
+        'dns' => [
+	        'FriendlyName' => 'DNS',
+	        'Type' => 'dropdown',
+	        'Options' => [
+		        'livedns' => 'Gandi LiveDNS',
+		        'whmcs' => 'Proprietary',
+	        ],
+        ],
 
-    );
+    ];
 }
 
 /**
@@ -104,73 +110,63 @@ function gandi_getConfigArray($params)
  *
  * @return array
  */
-function gandi_RegisterDomain($params)
-{
-    if( $params['accountType'] == 'individual' ){
+function gandi_RegisterDomain( $params ) {
+    if ( 'individual' === $params['accountType'] ){
         $organization = '';
-    }else{
+    } else {
         $organization = $params['organization'];
     }
-    // registration parameters
-    $sld = $params['sld'];
-    $tld = $params['tld'];
-    $registrationPeriod = $params['regperiod'];
-
-    /**
-     * Nameservers.
-     *
-     * If purchased with web hosting, values will be taken from the
-     * assigned web hosting server. Otherwise uses the values specified
-     * during the order process.
-     */
-    $nameservers = [
-        $params['ns1'],
-        $params['ns2'],
-        $params['ns3'],
-        $params['ns4'],
-        $params['ns5']
+    $sld                = $params['sld'];
+    $tld                = $params['tld'];
+	$domain             = $sld . '.' . $tld;
+	$registrationPeriod = $params['regperiod'];
+	$nameservers        = [];
+	if ( 'whmcs' === $params['dns'] ) {
+		$nameservers = [
+			$params['ns1'],
+			$params['ns2'],
+			$params['ns3'],
+			$params['ns4'],
+			$params['ns5']
+		];
+	}
+    $contacts          = [];
+    $contacts['owner'] = [
+        'firstname' => $params['firstname'],
+        'lastname' => $params['lastname'],
+        'email' => $params['email'],
+        'address' => $params['address1'],
+        'city' => $params['city'],
+        'postcode' =>  $params['postcode'],
+        'countrycode' => $params['countrycode'],
+        'countryname' => $params['countryname'],
+        'phonenumber' => $params['phonenumber'],
+        'phonecountrcCode' => $params['phonecc'],
+        'phonenumberformatted' => $params['phonenumberformatted'],
+        'orgname' => $params['companyname'],
+        'language' => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
     ];
-
-
-    $contacts = [];
-    $contacts["owner"] = [
-        "firstname" => $params["firstname"],
-        "lastname" => $params["lastname"],
-        "email" => $params["email"],
-        "address" => $params["address1"],
-        "city" => $params["city"],
-        "postcode" =>  $params["postcode"],
-        "countrycode" => $params["countrycode"],
-        "countryname" => $params["countryname"],
-        "phonenumber" => $params["phonenumber"],
-        "phonecountrcCode" => $params["phonecc"],
-        "phonenumberformatted" => $params['phonenumberformatted'],
-        "orgname" => $params['companyname'],
-        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language']
-    ];
-    $apiKey = $params['API Key'];
-    $registrationPeriod = $params['regperiod'];
-    $domain = $sld . '.' . $tld;
     try {
-        $api = new ApiClient($params["apiKey"]);
-        $availability = $api->getDomainAvailability($domain);
-        if ($availability != 'available') {
+        $api          = new ApiClient( $params['apiKey'] );
+        $availability = $api->getDomainAvailability( $domain );
+        if ( $availability !== 'available' ) {
             return [
                 'error' => $availability
             ];
         }
-        $response = $api->registerDomain($domain, $contacts, $nameservers, $registrationPeriod, $organization);
-        if ((isset($response->code) && $response->code != 202)|| isset($response->errors)) {
-            return array(
-                   'error' => json_encode($response)
-              );
+        $response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $organization );
+        if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+            return [
+                   'error' => json_encode( $response )
+            ];
         }
-
-        return 'success';
-    } catch (\Exception $e) {
-        return array(
+	    return [
+		    'success' => true
+	    ];
+    } catch ( \Exception $e ) {
+	    return [
             'error' => $e->getMessage(),
-        );
+        ];
     }
 }
 
@@ -190,62 +186,58 @@ function gandi_RegisterDomain($params)
  *
  * @return array
  */
-function gandi_TransferDomain($params)
-{
-    $apiKey = $params['API Key'];
-    $sld = $params['sld'];
-    $tld = $params['tld'];
-    $registrationPeriod = $params['regperiod'];
-    $domain = $sld . '.' . $tld;
-    $contacts = [];
-    $contacts["owner"] = [
-        "firstname" => $params["firstname"],
-        "lastname" => $params["lastname"],
-        "email" => $params["email"],
-        "address" => $params["address1"],
-        "city" => $params["city"],
-        "postcode" =>  $params["postcode"],
-        "countrycode" => $params["countrycode"],
-        "countryname" => $params["countryname"],
-        "phonenumber" => $params["phonenumber"],
-        "phonecountrcCode" => $params["phonecc"],
-        "phonenumberformatted" => $params['phonenumberformatted'],
-        "orgname" => $params['companyname'],
-        "language" => (empty($params['language'])) ? $GLOBALS['CONFIG']['Language'] : $params['language']
-    ];
-
-    if( $params['accountType'] == 'individual' ){
-        $organization = '';
-    }else{
-        $organization = $params['organization'];
-    }
-
-    $nameservers = [
-        $params['ns1'],
-        $params['ns2'],
-        $params['ns3'],
-        $params['ns4'],
-        $params['ns5']
-    ];
-
-    $registrationPeriod = $params['regperiod'];
-    $authCode = $params['transfersecret'];
-    try {
-        $api = new ApiClient($params["apiKey"]);
-        $response = $api->transferDomain($domain, $contacts, $nameservers, $registrationPeriod, $authCode, $organization);
-        if ((isset($response->code) && $response->code != 202)|| isset($response->errors)) {
-            return array(
-                    'error' => json_encode($response)
-               );
-        }
-
-        return array(
-            'success' => true,
-        );
-    } catch (\Exception $e) {
-        return array(
-            'error' => $e->getMessage(),
-        );
+function gandi_TransferDomain( $params ) {
+	if ( 'individual' === $params['accountType'] ){
+		$organization = '';
+	} else {
+		$organization = $params['organization'];
+	}
+	$sld                = $params['sld'];
+	$tld                = $params['tld'];
+	$domain             = $sld . '.' . $tld;
+	$registrationPeriod = $params['regperiod'];
+	$authCode           = $params['transfersecret'];
+	$nameservers        = [];
+	if ( 'whmcs' === $params['dns'] ) {
+		$nameservers = [
+			$params['ns1'],
+			$params['ns2'],
+			$params['ns3'],
+			$params['ns4'],
+			$params['ns5']
+		];
+	}
+	$contacts          = [];
+	$contacts['owner'] = [
+		'firstname' => $params['firstname'],
+		'lastname' => $params['lastname'],
+		'email' => $params['email'],
+		'address' => $params['address1'],
+		'city' => $params['city'],
+		'postcode' =>  $params['postcode'],
+		'countrycode' => $params['countrycode'],
+		'countryname' => $params['countryname'],
+		'phonenumber' => $params['phonenumber'],
+		'phonecountrcCode' => $params['phonecc'],
+		'phonenumberformatted' => $params['phonenumberformatted'],
+		'orgname' => $params['companyname'],
+		'language' => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
+	];
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+        $response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $organization );
+	    if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+		    return [
+			    'error' => json_encode( $response )
+		    ];
+	    }
+	    return [
+		    'success' => true
+	    ];
+    } catch ( \Exception $e ) {
+	    return [
+		    'error' => $e->getMessage(),
+	    ];
     }
 }
 
@@ -265,36 +257,32 @@ function gandi_TransferDomain($params)
  *
  * @return array
  */
-function gandi_RenewDomain($params)
-{
-    $apiKey = $params['API Key'];
-    $sld = $params['sld'];
-    $tld = $params['tld'];
-    $registrationPeriod = $params['regperiod'];
-    $domain = $sld . '.' . $tld;
-    if( $params['accountType'] == 'individual' ){
-        $organization = '';
-    }else{
-        $organization = $params['organization'];
-    }
-    try {
-        $api = new ApiClient($params["apiKey"]);
-        $response = $api->renewDomain($domain, $registrationPeriod, $organization);
-        if ((isset($response->code) && $response->code != 202)|| isset($response->errors)) {
-            return array(
-                    'error' => json_encode($response)
-               );
-        }
-
-        $response = [
-             'success' => true,
-         ];
-        return $response;
-    } catch (\Exception $e) {
-        return array(
-             'error' => $e->getMessage(),
-         );
-    }
+function gandi_RenewDomain( $params ) {
+	if ( 'individual' === $params['accountType'] ){
+		$organization = '';
+	} else {
+		$organization = $params['organization'];
+	}
+	$sld                = $params['sld'];
+	$tld                = $params['tld'];
+	$domain             = $sld . '.' . $tld;
+	$registrationPeriod = $params['regperiod'];
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+        $response = $api->renewDomain( $domain, $registrationPeriod, $organization );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		return [
+			'success' => true
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
 }
 
 /**
@@ -308,17 +296,13 @@ function gandi_RenewDomain($params)
  *
  * @return array
  */
-function gandi_GetNameservers($params)
-{
-    $apiKey = $params['API Key'];
+function gandi_GetNameservers($params) {
     $sld = $params['sld'];
     $tld = $params['tld'];
-    $registrationPeriod = $params['regperiod'];
     $domain = $sld . '.' . $tld;
-
-    try {
-        $api = new ApiClient($params["apiKey"]);
-        $request = $api->getDomainNameservers($domain);
+	try {
+		$api          = new ApiClient( $params['apiKey'] );
+        $request = $api->getDomainNameservers( $domain );
         if (!is_array($request)) {
             return [
                 'success' => false
@@ -331,7 +315,7 @@ function gandi_GetNameservers($params)
             $response['ns' . $index] = $v;
         }
         return $response;
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -385,7 +369,7 @@ function gandi_SaveNameservers($params)
         return array(
             'success' => true,
         );
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -443,7 +427,7 @@ function gandi_GetContactDetails($params)
             'Billing' => $billing,
             'Admin' => $admin
         );
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -481,7 +465,7 @@ function gandi_SaveContactDetails($params)
         return array(
             'success' => true,
         );
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -524,7 +508,7 @@ function gandi_CheckAvailability($params)
             $results->append($searchResult);
         }
         return $results;
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -586,7 +570,7 @@ function gandi_GetDNS($params)
             }
         }
         return $hostRecords;
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -628,7 +612,7 @@ function gandi_SaveDNS($params)
         return array(
             'success' => 'success',
         );
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -664,7 +648,7 @@ function gandi_RegisterNameserver($params)
         return array(
             'success' => 'success',
         );
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -763,7 +747,7 @@ function gandi_Sync($params)
                 'transferredAway' => false
             );
         }
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -843,7 +827,7 @@ function gandi_GetEPPCode($params)
                 'eppcode' => $request->authinfo,
             );
         
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'error' => $e->getMessage(),
         );
@@ -886,7 +870,7 @@ function gandi_TransferSync($params)
                 'error' => ''
             );
         }
-    } catch (\Exception $e) {
+    } catch ( \Exception $e ) {
         return array(
             'failed' => true,
             'completed' => false,
