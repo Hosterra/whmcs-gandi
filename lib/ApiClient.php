@@ -2,117 +2,121 @@
 
 namespace WHMCS\Module\Registrar\Gandi;
 
-class ApiClient
-{
+class ApiClient {
     private $endPoint;
     private $apiKey;
+	private $registrar = 'Gandi Registrar';
 
-
-    public function getDomainInfo($domain)
-    {
+	public function __construct( $apiKey, $testMode = true ) {
+		$this->endPoint = $testMode?"https://api.gandi.net/v5":"https://api.gandi.net/v5";
+		$this->apiKey   = $apiKey;
+	}
+	
+    public function getDomainInfo($domain) {
         $url = "{$this->endPoint}/domain/domains/{$domain}";
-        $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi Registrar', 'Domain info', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'GET' );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
     
-    public function registerDomain($domain, $contacts, $nameservers, $period, $organization = '')
-    {
-        foreach ($nameservers as $k => $v) {
-            if (!$v) {
-                unset($nameservers[$k]);
-            }
-        }
+    public function registerDomain( $domain, $contacts, $nameservers, $period, $organization = '' ) {
         $url = "{$this->endPoint}/domain/domains";
-        if( $organization ){
+        if ( $organization ) {
             $url .= "?sharing_id={$organization}";
         }
         $owner = $this->generateOwner($domain, $contacts);
         $params = [
-            "fqdn" => $domain,
-            "duration" => $period,
-            "owner" => $owner,
-            "nameservers" => $nameservers
+            'fqdn' => $domain,
+            'duration' => $period,
+            'owner' => $owner,
+            'nameservers' => $nameservers
         ];
-        $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi Registrar', 'Domain register', $params, $response);
-        return json_decode($response);
+		if ( 0 < count( $nameservers ) ) {
+			foreach ( $nameservers as $k => $v ) {
+				if ( !$v ) {
+					unset( $nameservers[$k] );
+				}
+			}
+			if ( 0 < count( $nameservers ) ) {
+				$params['nameservers'] = $nameservers;
+			}
+		}
+        $response = $this->sendRequest($url, 'POST', $params);
+        logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
+        return json_decode( $response );
     }
 
-    public function transferDomain($domain, $contacts, $nameservers, $period, $authCode, $organization = '')
-    {
+    public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $organization = '' ) {
         foreach ($nameservers as $k => $v) {
             if (!$v) {
                 unset($nameservers[$k]);
             }
         }
         $url = "{$this->endPoint}/domain/transferin";
-        if( $organization ){
+        if ( $organization ){
             $url .= "?sharing_id={$organization}";
         }
-        $owner = $this->generateOwner($domain, $contacts);
+        $owner  = $this->generateOwner( $domain, $contacts );
         $params = [
-            "fqdn" => $domain,
-            "duration" => $period,
-            "owner" => $owner,
-            "nameservers" => $nameservers,
-            "authinfo" => $authCode
+            'fqdn' => $domain,
+            'duration' => $period,
+            'owner' => $owner,
+            'authinfo' => $authCode
         ];
-        $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi Registrar', 'Domain transfer', $params, $response);
-        return json_decode($response);
+	    if ( 0 < count( $nameservers ) ) {
+		    foreach ( $nameservers as $k => $v ) {
+			    if ( !$v ) {
+				    unset( $nameservers[$k] );
+			    }
+		    }
+		    if ( 0 < count( $nameservers ) ) {
+			    $params['nameservers'] = $nameservers;
+		    }
+	    }
+        $response = $this->sendRequest( $url, 'POST', $params );
+        logModuleCall( $this->registrar, __FUNCTION__, $params, $response);
+        return json_decode( $response );
     }
-
-
-    private function generatePassword($length = 8)
-    {
+	
+    private function generatePassword( $length = 8 ) {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        $count = mb_strlen($chars);
-        for ($i = 0, $result = ''; $i < $length; $i++) {
-            $index = rand(0, $count - 1);
-            $result .= mb_substr($chars, $index, 1);
+        $count = mb_strlen( $chars );
+        for ( $i = 0, $result = ''; $i < $length; $i++ ) {
+            $index   = rand( 0, $count - 1 );
+            $result .= mb_substr( $chars, $index, 1 );
         }
         return $result;
     }
 
-    private function generateOwner($domain, $contacts) {
-
-        // One of: "en", "es", "fr", "ja", "zh-hans", "zh-hant"
-        $languages_mapping = [
+    private function generateOwner( $domain, $contacts ) {
+		$languages_mapping = [
             'english' => 'en',
             'spanish' => 'es',
             'french' => 'fr',
             'japanese' => 'ja',
             'chinese' => 'zh-hant',
         ];
-
-        $owner = [
-            "city" => $contacts["owner"]["city"],
-            "orgname" => $contacts["owner"]["orgname"],
-            "given" => $contacts["owner"]["firstname"],
-            "family" => $contacts["owner"]["lastname"],
-            "zip" => $contacts["owner"]["postcode"],
-            "country" => $contacts["owner"]["countrycode"],
-            "streetaddr" => $contacts["owner"]["address"],
-            "phone" => $contacts["owner"]["phonenumberformatted"],
-            "state" => $contacts["owner"]["state"],
-            "type" => (empty($contacts["owner"]["orgname"]) ? 'individual' : 'company'), // One of: "individual", "company", "association", "publicbody", "reseller"
-            "email" => $contacts["owner"]["email"]
+        $owner             = [
+            'city' => $contacts['owner']['city'],
+            'orgname' => $contacts['owner']['orgname'],
+            'given' => $contacts['owner']['firstname'],
+            'family' => $contacts['owner']['lastname'],
+            'zip' => $contacts['owner']['postcode'],
+            'country' => $contacts['owner']['countrycode'],
+            'streetaddr' => $contacts['owner']['address'],
+            'phone' => $contacts['owner']['phonenumberformatted'],
+            'state' => $contacts['owner']['state'],
+            'type' => (empty($contacts['owner']['orgname']) ? 'individual' : 'company'), // One of: 'individual', 'company', 'association', 'publicbody', 'reseller'
+            'email' => $contacts['owner']['email']
         ];
-        if (in_array($owner['country'], ['GF', 'GP', 'MQ', 'RE', 'YT'])) {
-            $owner['state'] = 'FR-'.$owner['country'];
+        if ( in_array( $owner['country'], ['GF', 'GP', 'MQ', 'RE', 'YT'] ) ) {
+            $owner['state']   = 'FR-' . $owner['country'];
             $owner['country'] = 'FR';
         }
-        if (isset($languages_mapping[$contacts["owner"]["language"]])) {
-         $owner['lang'] = $languages_mapping[$contacts["owner"]["language"]];
+        if ( isset( $languages_mapping[$contacts['owner']['language']] ) ) {
+			$owner['lang'] = $languages_mapping[$contacts['owner']['language']];
         }
         return $owner;
-    }
-
-    public function __construct($apiKey, $testMode=true)
-    {
-        $this->endPoint = $testMode?"https://api.gandi.net/v5":"https://api.gandi.net/v5";
-        $this->apiKey = $apiKey;
     }
 
     /*
@@ -123,11 +127,10 @@ class ApiClient
     * @return string
     *
     */
-    public function getDomainAvailability(string $domain)
-    {
+    public function getDomainAvailability( string $domain ) {
         $url = "{$this->endPoint}/domain/check?name={$domain}";
-        $response = json_decode($this->sendRequest($url, "GET"));
-        logModuleCall('Gandi Registrar', 'Domain availability', $domain, $response);
+        $response = json_decode( $this->sendRequest( $url, 'GET' ) );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response);
         return $response->products[0]->status;
     }
  
@@ -138,12 +141,11 @@ class ApiClient
     * @return array
     *
     */
-    public function getDomainList()
-    {
+    public function getDomainList() {
         $url = "{$this->endPoint}/domain/domains";
-        $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi Registrar', 'Domain list', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'GET' );
+        logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
+        return json_decode( $response );
     }
 
     /*
@@ -154,12 +156,11 @@ class ApiClient
     * @return array
     *
     */
-    public function getDomainContacts(string $domain)
-    {
+    public function getDomainContacts( string $domain ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/contacts";
-        $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi Registrar', 'Domain availability', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'GET' );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
 
@@ -171,12 +172,11 @@ class ApiClient
     * @return array
     *
     */
-    public function getDomainNameservers(string $domain)
-    {
+    public function getDomainNameservers( string $domain ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/nameservers";
-        $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi Registrar', 'Domain availability', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'GET' );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
     /*
@@ -188,19 +188,17 @@ class ApiClient
     * @return array
     *
     */
-    public function renewDomain(string $domain, $period = 1,string $organization = '')
-    {
+    public function renewDomain( string $domain, $period = 1, string $organization = '' ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/renew";
-        if( $organization ){
+        if( $organization ) {
              $url .= "?sharing_id={$organization}";
         }
         $params = [
             'duration' => $period
         ];
-
-        $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi Registrar', 'Domain renew', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'POST', $params );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
 
@@ -213,15 +211,14 @@ class ApiClient
     * @return array
     *
     */
-    public function updateDomainNameservers(string $domain, array $nameservers)
-    {
+    public function updateDomainNameservers( string $domain, array $nameservers ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/nameservers";
         $params = [
             'nameservers' => $nameservers
         ];
-        $response = $this->sendRequest($url, "PUT", $params);
-        logModuleCall('Gandi Registrar', 'Domain update nameservers', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'PUT', $params );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
 
@@ -234,8 +231,7 @@ class ApiClient
     * @return array
     *
     */
-    public function updateDomainContacts(string $domain, array $contacts)
-    {
+    public function updateDomainContacts( string $domain, array $contacts ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/contacts";
         $owner = (object) $contacts['Owner'];
         $admin = (object) $contacts['Admin'];
@@ -250,9 +246,9 @@ class ApiClient
             'bill' => $billing,
             'tech' => $tech
         ];
-        $response = $this->sendRequest($url, "PATCH", $params);
-        logModuleCall('Gandi Registrar', 'Domain update contacts', [$domain,$params], $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'PATCH', $params );
+        logModuleCall( $this->registrar, __FUNCTION__, [$domain,$params], $response );
+        return json_decode( $response );
     }
 
 
@@ -266,16 +262,15 @@ class ApiClient
      * @return array
      *
      */
-    public function registerNameserver(string $domain, string $name, string $ip)
-    {
+    public function registerNameserver( string $domain, string $name, string $ip ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/hosts";
         $params = [
             'name' => $name,
             'ips' => [$ip]
         ];
-        $response = $this->sendRequest($url, "POST", $params);
-        logModuleCall('Gandi Registrar', 'Register nameserver', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'POST', $params );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
     /*
@@ -287,12 +282,11 @@ class ApiClient
     * @return array
     *
     */
-    public function deleteNameserver(string $domain, string $name)
-    {
+    public function deleteNameserver( string $domain, string $name ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/hosts/{$name}";
-        $response = $this->sendRequest($url, "DELETE", []);
-        logModuleCall('Gandi Registrar', 'Delete nameserver', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'DELETE', [] );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
     /*
@@ -305,24 +299,20 @@ class ApiClient
     * @return array
     *
     */
-    public function updateNameserver(string $domain, string $name, string $ip)
+    public function updateNameserver( string $domain, string $name, string $ip )
     {
         $url = "{$this->endPoint}/domain/domains/{$domain}/hosts/{$name}";
         $params = [
             'ips' => [$ip]
         ];
-        $response = $this->sendRequest($url, "PUT", $params);
-        logModuleCall('Gandi Registrar', 'Update nameserver', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'PUT', $params );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
-
-
-
-    public function sendRequest($url, $method="GET", $post=[], $timeout=30)
-    {
+    private function sendRequest ( $url, $method = 'GET', $post = [], $timeout = 30 ) {
         $curl = curl_init();
-        curl_setopt_array($curl, array(
+        curl_setopt_array( $curl, [
              CURLOPT_PORT => '0',
              CURLOPT_URL => $url,
              CURLOPT_RETURNTRANSFER => true,
@@ -331,34 +321,21 @@ class ApiClient
              CURLOPT_TIMEOUT => $timeout,
              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
              CURLOPT_CUSTOMREQUEST => $method,
-             CURLOPT_HTTPHEADER => array(
+             CURLOPT_HTTPHEADER => [
                  "authorization: Apikey {$this->apiKey}",
                  "content-type: application/json"
-             ),
+             ],
              CURLOPT_USERAGENT => 'WHMCS/1.3'
-         ));
-        if ($method == "POST") {
-            curl_setopt_array($curl, [ CURLOPT_CUSTOMREQUEST => "POST"]);
-            curl_setopt_array($curl, [ CURLOPT_POSTFIELDS  => json_encode($post)]);
-        }
-        if ($method == "PUT") {
-            curl_setopt_array($curl, [ CURLOPT_CUSTOMREQUEST => "PUT"]);
-            curl_setopt_array($curl, [ CURLOPT_POSTFIELDS  => json_encode($post)]);
-        }
-
-        if ($method == "PATCH") {
-            curl_setopt_array($curl, [ CURLOPT_CUSTOMREQUEST => "PATCH"]);
-            curl_setopt_array($curl, [ CURLOPT_POSTFIELDS  => json_encode($post)]);
-        }
-
-        if ($method == "DELETE") {
-            curl_setopt_array($curl, [ CURLOPT_CUSTOMREQUEST => "DELETE"]);
-        }
-
-
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        curl_close($curl);
+         ] );
+		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH', 'DELETE' ] ) ) {
+			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => $method ] );
+		}
+	    if ( in_array( $method, [ 'POST', 'PUT', 'PATCH' ] ) ) {
+		    curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS  => json_encode( $post ) ] );
+	    }
+        $response = curl_exec( $curl );
+        $err      = curl_error( $curl );
+        curl_close( $curl );
         return $response;
     }
 
@@ -370,12 +347,11 @@ class ApiClient
      * @return array
      *
      */
-    public function getLiveDnsInfo(string $domain)
-    {
+    public function getLiveDnsInfo(string $domain) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-        $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi Registrar', 'LiveDNS info', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'GET' );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
     /*
@@ -386,12 +362,11 @@ class ApiClient
     * @return array
     *
     */
-    public function enableLiveDNS(string $domain)
-    {
+    public function enableLiveDNS( string $domain ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-        $response = $this->sendRequest($url, "POST");
-        logModuleCall('Gandi Registrar', 'Enable LiveDNS', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'POST' );
+        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+        return json_decode( $response );
     }
 
 
@@ -403,10 +378,10 @@ class ApiClient
     *
     */
 
-    public function getOrganizations(){
+    public function getOrganizations() {
         $url = "{$this->endPoint}/organization/organizations";
-        $response = $this->sendRequest($url, "GET");
-        logModuleCall('Gandi Registrar', 'List organizations', $domain, $response);
-        return json_decode($response);
+        $response = $this->sendRequest( $url, 'GET' );
+        logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
+        return json_decode( $response );
     }
 }
