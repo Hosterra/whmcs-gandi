@@ -5,7 +5,7 @@ namespace WHMCS\Module\Registrar\Gandi;
 class ApiClient {
     private $endPoint;
     private $apiKey;
-	private $registrar = 'Gandi Registrar';
+	private $registrar = GANDI_REGISTRAR_PRODUCT_NAME;
 
 	public function __construct( $apiKey, $testMode = true ) {
 		$this->endPoint = $testMode?"https://api.gandi.net/v5":"https://api.gandi.net/v5";
