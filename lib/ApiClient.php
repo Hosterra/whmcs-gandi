@@ -12,11 +12,11 @@ class ApiClient {
 		$this->apiKey   = $apiKey;
 	}
 	
-    public function getDomainInfo($domain) {
+    public function getDomainInfo( $domain, $associative = false) {
         $url = "{$this->endPoint}/domain/domains/{$domain}";
         $response = $this->sendRequest( $url, 'GET' );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
-        return json_decode( $response );
+        return json_decode( $response, $associative );
     }
     
     public function registerDomain( $domain, $contacts, $nameservers, $period, $organization = '' ) {
@@ -133,6 +133,25 @@ class ApiClient {
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response);
         return $response->products[0]->status;
     }
+
+	/*
+    *
+    * Lock/unlock the domain
+    *
+    * @param string $domain
+	* @param bool $locked
+    * @return array
+    *
+    */
+	public function setLockDomain( string $domain, bool $locked ) {
+		$url = "{$this->endPoint}/domain/domains/{$domain}/status";
+		$params = [
+			'clientTransferProhibited' => $locked
+		];
+		$response = $this->sendRequest( $url, 'PATCH', $params );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+		return json_decode( $response );
+	}
  
     /*
     *
@@ -310,6 +329,52 @@ class ApiClient {
         return json_decode( $response );
     }
 
+	/*
+     *
+     * Return the LiveDNS info.
+     *
+     * @param string $domain
+     * @return array
+     *
+     */
+	public function getLiveDnsInfo(string $domain) {
+		$url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
+		$response = $this->sendRequest( $url, 'GET' );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Enable LiveDNS.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function enableLiveDNS( string $domain ) {
+		$url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
+		$response = $this->sendRequest( $url, 'POST' );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+		return json_decode( $response );
+	}
+
+
+	/*
+	*
+	* List organizations
+	*
+	* @return array
+	*
+	*/
+
+	public function getOrganizations() {
+		$url = "{$this->endPoint}/organization/organizations";
+		$response = $this->sendRequest( $url, 'GET' );
+		logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
+		return json_decode( $response );
+	}
+
     private function sendRequest ( $url, $method = 'GET', $post = [], $timeout = 30 ) {
         $curl = curl_init();
         curl_setopt_array( $curl, [
@@ -337,51 +402,5 @@ class ApiClient {
         $err      = curl_error( $curl );
         curl_close( $curl );
         return $response;
-    }
-
-    /*
-     *
-     * Return the LiveDNS info.
-     *
-     * @param string $domain
-     * @return array
-     *
-     */
-    public function getLiveDnsInfo(string $domain) {
-        $url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-        $response = $this->sendRequest( $url, 'GET' );
-        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
-        return json_decode( $response );
-    }
-
-    /*
-    *
-    * Enable LiveDNS.
-    *
-    * @param string $domain
-    * @return array
-    *
-    */
-    public function enableLiveDNS( string $domain ) {
-        $url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-        $response = $this->sendRequest( $url, 'POST' );
-        logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
-        return json_decode( $response );
-    }
-
-
-    /*
-    *
-    * List organizations
-    *
-    * @return array
-    *
-    */
-
-    public function getOrganizations() {
-        $url = "{$this->endPoint}/organization/organizations";
-        $response = $this->sendRequest( $url, 'GET' );
-        logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
-        return json_decode( $response );
     }
 }

@@ -4,6 +4,8 @@ if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 
+use WHMCS\Carbon;
+use WHMCS\Domain\Registrar\Domain;
 use WHMCS\Domains\DomainLookup\ResultsList;
 use WHMCS\Domains\DomainLookup\SearchResult;
 use WHMCS\Module\Registrar\Gandi\ApiClient;
@@ -287,6 +289,81 @@ function gandi_RenewDomain( $params ) {
 	}
 }
 
+/**
+ * Set registrar lock status.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_SaveRegistrarLock( $params ) {
+	$sld        = $params['sld'];
+	$tld        = $params['tld'];
+	$domain     = $sld . '.' . $tld;
+	$lockStatus = $params['lockenabled'];
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->setLockDomain( $domain, 'locked' === $lockStatus );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		return [
+			'success' => $lockStatus
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Get registrar lock status.
+ *
+ * Also known as Domain Lock or Transfer Lock status.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return string|array Lock status or error message
+ */
+function gandi_GetRegistrarLock( $params ) {
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->getDomainInfo( $domain );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		if ( is_array( $response->status ) ) {
+			if ( in_array( 'clientTransferProhibited', $response->status ) ) {
+				return 'locked';
+			}
+			return 'unlocked';
+		} else {
+			return [
+				'error' => 'No information about lock/unlock status'
+			];
+		}
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+
+
+
 if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
 
 	/**
@@ -318,12 +395,11 @@ if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
 				$index                     = $k + 1;
 				$response[ 'ns' . $index ] = $v;
 			}
-
 			return $response;
 		} catch ( \Exception $e ) {
-			return array(
+			return [
 				'error' => $e->getMessage(),
-			);
+			];
 		}
 	}
 
@@ -340,8 +416,9 @@ if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
 	 *
 	 */
 	function gandi_SaveNameservers( $params ) {
-
-		// submitted nameserver values
+		$sld         = $params['sld'];
+		$tld         = $params['tld'];
+		$domain      = $sld . '.' . $tld;
 		$nameservers = [];
 		if ( $params['ns1'] ) {
 			$nameservers[] = $params['ns1'];
@@ -359,27 +436,89 @@ if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
 			$nameservers[] = $params['ns5'];
 		}
 		try {
-			$apiKey  = $params['API Key'];
-			$sld     = $params['sld'];
-			$tld     = $params['tld'];
-			$domain  = $sld . '.' . $tld;
-			$api     = new ApiClient( $params["apiKey"] );
+			$api     = new ApiClient( $params['apiKey'] );
 			$request = $api->updateDomainNameservers( $domain, $nameservers );
 			logModuleCall( 'Gandi Registrar', __FUNCTION__, $nameservers, serialize( $request ) );
 			if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
 				throw new Exception( json_encode( $request ) );
 			}
-
-			return array(
+			return [
 				'success' => true,
-			);
+			];
 		} catch ( \Exception $e ) {
-			return array(
+			return [
 				'error' => $e->getMessage(),
-			);
+			];
 		}
 	}
 }
+
+/**
+ * Get all available information about a domain
+ *
+ * @param array $params common module parameters
+ *
+ * @return object
+ * @see https://developers.whmcs.com/domain-registrars/domain-information/
+ *
+ */
+function gandi_aGetDomainInformation( $params ) {
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		//$domain = $params['domainname'];
+		$api = new ApiClient( $params['apiKey'] );
+		$request = $api->getDomainInfo( $domain, true );
+		$d = new Domain();
+		$d->setDomain( $request['fqdn'] );
+		$d->setNameservers( $request['nameservers'] );
+		$d->setRegistrationStatus( 'STATUS_ARCHIVED' );
+		$d->setTransferLock( true );
+
+
+		/*return ( new Domain )
+			->setDomain( $request['fqdn'] )
+			->setNameservers( $request['nameservers'] )
+			->setRegistrationStatus( $request['status'] )
+			->setTransferLock( $request['transferlock'] )
+			->setTransferLockExpiryDate(null)
+			->setExpiryDate(Carbon::createFromFormat('Y-m-d', $request['expirydate'])) // $request['expirydate'] = YYYY-MM-DD
+			->setRestorable(false)
+			->setIdProtectionStatus($request['addons']['hasidprotect'])
+			->setDnsManagementStatus($request['addons']['hasdnsmanagement'])
+			->setEmailForwardingStatus($request['addons']['hasemailforwarding'])
+			->setIsIrtpEnabled(in_array($request['tld'], ['.com']))
+			->setIrtpOptOutStatus($request['irtp']['optoutstatus'])
+			->setIrtpTransferLock($request['irtp']['lockstatus'])
+			->IrtpTransferLockExpiryDate($irtpTransferLockExpiryDate)
+			->setDomainContactChangePending($request['status']['contactpending'])
+			->setPendingSuspension($request['status']['pendingsuspend'])
+			->setDomainContactChangeExpiryDate($request['status']['expires'])
+			->setRegistrantEmailAddress($request['registrant']['email'])
+			->setIrtpVerificationTriggerFields(
+				[
+					'Registrant' => [
+						'First Name',
+						'Last Name',
+						'Organization Name',
+						'Email',
+					],
+				]
+			);*/
+
+
+		
+		return $d;
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+
+
 
 /**
  * Get the current WHOIS Contact Information.
@@ -822,8 +961,7 @@ function gandi_ClientArea($params)
  * @return array
  *
  */
-function gandi_GetEPPCode($params)
-{
+function gandi_GetEPPCode($params) {
     try {
         $domain = $params['domainname'];
         $api = new ApiClient($params["apiKey"]);

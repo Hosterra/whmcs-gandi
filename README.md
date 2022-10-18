@@ -5,7 +5,15 @@ Use Gandi.net as registrar in WHMCS.
 ![PHP 7.x Compatibility](https://img.shields.io/badge/PHP-7.x-7c86b4?style=flat-square) ![WHCMS 8.5.x Compatibility](https://img.shields.io/badge/WHMCS-8.5.x-96be4f?style=flat-square)
 
 ## Features
-…
+### Global
+- DNS selection between self managed and Gandi LiveDNS
+- Organisation selection (with individual, company and reseller supported types)
+### Per domain
+- Registration
+- Renewal
+- Transfer
+- Protection (lock/unlock)
+- EPP management
 
 ## How to install
 1. In your WHCMS installation, in the `modules/registrars`, create a `gandi` directory.
@@ -15,9 +23,7 @@ Use Gandi.net as registrar in WHMCS.
 
 ## How to configure
 There's currently 2 levels of settings:
-
 ### Standard settings
-
 ### Advanced settings and tweaks
 In the file `gandi/config.php` you will find some way to tweak the behavior of Gandi Registrar for WHMCS. To do so, just change values in the global array named `GANDI_REGISTRAR_OPTIONS`. The meaning of the keys are:
 - `allowNameserversChange` - _(boolean)_ - If false, it will fully prevent the customer to change the name servers. It is only useful if you choose Gandi LiveDNS as DNS.
