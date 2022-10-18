@@ -9,6 +9,8 @@ use WHMCS\Domains\DomainLookup\SearchResult;
 use WHMCS\Module\Registrar\Gandi\ApiClient;
 use WHMCS\Module\Registrar\Gandi\LiveDNS;
 
+require_once dirname(__FILE__) . '/config.php';
+
 require_once dirname(__FILE__) . '/lib/LiveDNS.php';
 
 /**
@@ -22,7 +24,7 @@ require_once dirname(__FILE__) . '/lib/LiveDNS.php';
 function gandi_MetaData()
 {
     return [
-	    'DisplayName' => 'Gandi Registrar',
+	    'DisplayName' => GANDI_REGISTRAR_PRODUCT_NAME . ' v' . GANDI_REGISTRAR_VERSION,
 	    'APIVersion' => '1.1',
     ];
 }
@@ -285,95 +287,98 @@ function gandi_RenewDomain( $params ) {
 	}
 }
 
-/**
- * Fetch current nameservers.
- *
- * This function should return an array of nameservers for a given domain.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_GetNameservers($params) {
-    $sld = $params['sld'];
-    $tld = $params['tld'];
-    $domain = $sld . '.' . $tld;
-	try {
-		$api          = new ApiClient( $params['apiKey'] );
-        $request = $api->getDomainNameservers( $domain );
-        if (!is_array($request)) {
-            return [
-                'success' => false
-            ];
-        }
-        $response = [
-        ];
-        foreach ($request as $k => $v) {
-            $index = $k + 1;
-            $response['ns' . $index] = $v;
-        }
-        return $response;
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
-}
+if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
 
-/**
- * Save nameserver changes.
- *
- * This function should submit a change of nameservers request to the
- * domain registrar.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_SaveNameservers($params)
-{
+	/**
+	 * Fetch current nameservers.
+	 *
+	 * This function should return an array of nameservers for a given domain.
+	 *
+	 * @param array $params common module parameters
+	 *
+	 * @return array
+	 * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+	 *
+	 */
+	function gandi_GetNameservers( $params ) {
+		$sld    = $params['sld'];
+		$tld    = $params['tld'];
+		$domain = $sld . '.' . $tld;
+		try {
+			$api     = new ApiClient( $params['apiKey'] );
+			$request = $api->getDomainNameservers( $domain );
+			if ( ! is_array( $request ) ) {
+				return [
+					'success' => false
+				];
+			}
+			$response = [
+			];
+			foreach ( $request as $k => $v ) {
+				$index                     = $k + 1;
+				$response[ 'ns' . $index ] = $v;
+			}
 
-    // submitted nameserver values
-    $nameservers = [];
-    if ($params['ns1']) {
-        $nameservers[] = $params['ns1'];
-    }
-    if ($params['ns2']) {
-        $nameservers[] = $params['ns2'];
-    }
-    if ($params['ns3']) {
-        $nameservers[] = $params['ns3'];
-    }
-    if ($params['ns4']) {
-        $nameservers[] = $params['ns4'];
-    }
-    if ($params['ns5']) {
-        $nameservers[] = $params['ns5'];
-    }
-    try {
-        $apiKey = $params['API Key'];
-        $sld = $params['sld'];
-        $tld = $params['tld'];
-        $domain = $sld . '.' . $tld;
-        $api = new ApiClient($params["apiKey"]);
-        $request = $api->updateDomainNameservers($domain, $nameservers);
-        logModuleCall('Gandi Registrar', __FUNCTION__, $nameservers, serialize($request));
-        if ((isset($request->code) && $request->code != 202)|| isset($request->errors)) {
-            throw new Exception(json_encode($request));
-        }
+			return $response;
+		} catch ( \Exception $e ) {
+			return array(
+				'error' => $e->getMessage(),
+			);
+		}
+	}
 
-        return array(
-            'success' => true,
-        );
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
+	/**
+	 * Save nameserver changes.
+	 *
+	 * This function should submit a change of nameservers request to the
+	 * domain registrar.
+	 *
+	 * @param array $params common module parameters
+	 *
+	 * @return array
+	 * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+	 *
+	 */
+	function gandi_SaveNameservers( $params ) {
+
+		// submitted nameserver values
+		$nameservers = [];
+		if ( $params['ns1'] ) {
+			$nameservers[] = $params['ns1'];
+		}
+		if ( $params['ns2'] ) {
+			$nameservers[] = $params['ns2'];
+		}
+		if ( $params['ns3'] ) {
+			$nameservers[] = $params['ns3'];
+		}
+		if ( $params['ns4'] ) {
+			$nameservers[] = $params['ns4'];
+		}
+		if ( $params['ns5'] ) {
+			$nameservers[] = $params['ns5'];
+		}
+		try {
+			$apiKey  = $params['API Key'];
+			$sld     = $params['sld'];
+			$tld     = $params['tld'];
+			$domain  = $sld . '.' . $tld;
+			$api     = new ApiClient( $params["apiKey"] );
+			$request = $api->updateDomainNameservers( $domain, $nameservers );
+			logModuleCall( 'Gandi Registrar', __FUNCTION__, $nameservers, serialize( $request ) );
+			if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
+				throw new Exception( json_encode( $request ) );
+			}
+
+			return array(
+				'success' => true,
+			);
+		} catch ( \Exception $e ) {
+			return array(
+				'error' => $e->getMessage(),
+			);
+		}
+	}
 }
 
 /**
