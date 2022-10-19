@@ -65,7 +65,7 @@ function gandi_getConfigArray( $params ) {
     return [
         'FriendlyName' => [
             'Type' => 'System',
-            'Value' => 'Gandi Registrar (v5 API)',
+            'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
         ],
         'apiKey' => [
             'FriendlyName' => 'Api Key',
@@ -94,7 +94,13 @@ function gandi_getConfigArray( $params ) {
 		        'whmcs' => 'Proprietary',
 	        ],
         ],
-
+        'version' => [
+	        'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
+	        'Type' => 'text',
+	        'Size' => '100',
+	        'Disabled' => true,
+	        'Placeholder' => 'Sponsored by Hosterra - https://hosterra.eu'
+        ],
     ];
 }
 
@@ -245,6 +251,66 @@ function gandi_TransferDomain( $params ) {
     }
 }
 
+//TODO: registrarmodule_TransferSync
+/**
+ * Incoming Domain Transfer Sync.
+ *
+ * Check status of incoming domain transfers and notify end-user upon
+ * completion. This function is called daily for incoming domains.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function registrarmodule_TransferSync($params)
+{
+	// user defined configuration values
+	$userIdentifier = $params['APIUsername'];
+	$apiKey = $params['APIKey'];
+	$testMode = $params['TestMode'];
+	$accountMode = $params['AccountMode'];
+	$emailPreference = $params['EmailPreference'];
+
+	// domain parameters
+	$sld = $params['sld'];
+	$tld = $params['tld'];
+
+	// Build post data
+	$postfields = array(
+		'username' => $userIdentifier,
+		'password' => $apiKey,
+		'testmode' => $testMode,
+		'domain' => $sld . '.' . $tld,
+	);
+
+	try {
+		$api = new ApiClient();
+		$api->call('CheckDomainTransfer', $postfields);
+
+		if ($api->getFromResponse('transfercomplete')) {
+			return array(
+				'completed' => true,
+				'expirydate' => $api->getFromResponse('expirydate'), // Format: YYYY-MM-DD
+			);
+		} elseif ($api->getFromResponse('transferfailed')) {
+			return array(
+				'failed' => true,
+				'reason' => $api->getFromResponse('failurereason'), // Reason for the transfer failure if available
+			);
+		} else {
+			// No status change, return empty array
+			return array();
+		}
+
+	} catch (\Exception $e) {
+		return array(
+			'error' => $e->getMessage(),
+		);
+	}
+}
+
 /**
  * Renew a domain.
  *
@@ -288,6 +354,7 @@ function gandi_RenewDomain( $params ) {
 		];
 	}
 }
+
 
 /**
  * Set registrar lock status.
@@ -361,8 +428,36 @@ function gandi_GetRegistrarLock( $params ) {
 	}
 }
 
-
-
+/**
+ * Resend reachability mail for contact validation
+ *
+ * @param array $params common module parameters
+ *
+ * @see ?
+ *
+ * @return array
+ */
+function gandi_ResendIRTPVerificationEmail( $params ) {
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->resendReachabilityMail( $domain );
+		if ( ( isset( $response->code ) && 202 < (int) $response->code ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		return [
+			'success' => true
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
 
 if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
 
@@ -462,7 +557,7 @@ if ( GANDI_REGISTRAR_OPTIONS['allowNameserversChange'] ) {
  * @see https://developers.whmcs.com/domain-registrars/domain-information/
  *
  */
-function gandi_aGetDomainInformation( $params ) {
+function gandi_GetDomainInformation( $params ) {
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -473,8 +568,16 @@ function gandi_aGetDomainInformation( $params ) {
 		$d = new Domain();
 		$d->setDomain( $request['fqdn'] );
 		$d->setNameservers( $request['nameservers'] );
+		$d->setIdProtectionStatus( true );
+
+
+
+
+
 		$d->setRegistrationStatus( 'STATUS_ARCHIVED' );
 		$d->setTransferLock( true );
+		$d->setDomainContactChangePending(true);
+
 
 
 		/*return ( new Domain )

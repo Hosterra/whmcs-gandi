@@ -107,7 +107,9 @@ class ApiClient {
             'phone' => $contacts['owner']['phonenumberformatted'],
             'state' => $contacts['owner']['state'],
             'type' => (empty($contacts['owner']['orgname']) ? 'individual' : 'company'), // One of: 'individual', 'company', 'association', 'publicbody', 'reseller'
-            'email' => $contacts['owner']['email']
+            'email' => $contacts['owner']['email'],
+	        'data_obfuscated' => true,  //Forces ID Protect
+            'mail_obfuscated' => true,  //Forces ID Protect
         ];
         if ( in_array( $owner['country'], ['GF', 'GP', 'MQ', 'RE', 'YT'] ) ) {
             $owner['state']   = 'FR-' . $owner['country'];
@@ -147,6 +149,24 @@ class ApiClient {
 		$url = "{$this->endPoint}/domain/domains/{$domain}/status";
 		$params = [
 			'clientTransferProhibited' => $locked
+		];
+		$response = $this->sendRequest( $url, 'PATCH', $params );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+		return json_decode( $response );
+	}
+
+	/*
+    *
+    * Resend reachability mail for contact validation
+    *
+    * @param string $domain
+    * @return array
+    *
+    */
+	public function resendReachabilityMail( string $domain ) {
+		$url = "{$this->endPoint}/domain/domains/{$domain}/reachability";
+		$params = [
+			'action' => 'resend'
 		];
 		$response = $this->sendRequest( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
@@ -253,12 +273,20 @@ class ApiClient {
     public function updateDomainContacts( string $domain, array $contacts ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/contacts";
         $owner = (object) $contacts['Owner'];
+		$owner->data_obfuscated = true;
+	    $owner->mail_obfuscated = true;
         $admin = (object) $contacts['Admin'];
         $admin->type = 0;
+	    $admin->data_obfuscated = true;
+	    $admin->mail_obfuscated = true;
         $tech = (object) $contacts['Technical'];
         $tech->type = 0;
+	    $tech->data_obfuscated = true;
+	    $tech->mail_obfuscated = true;
         $billing = (object) $contacts['Billing'];
         $billing->type = 0;
+	    $billing->data_obfuscated = true;
+	    $billing->mail_obfuscated = true;
         $params = [
             'owner' => $owner,
             'admin' => $admin,
