@@ -6,8 +6,8 @@ Use Gandi.net as registrar in WHMCS.
 
 ## Features
 ### Global
-- DNS selection between self managed and Gandi LiveDNS
-- Organisation selection (with individual, company and reseller supported types)
+- DNS support for self managed and Gandi LiveDNS
+- Automatic query caching
 ### Per TLD 
 - x
 ### Per domain
@@ -29,11 +29,7 @@ Use Gandi.net as registrar in WHMCS.
 4. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
 
 ## How to configure
-There's currently 2 levels of settings:
-### Standard settings
-### Advanced settings and tweaks
-In the file `gandi/config.php` you will find some way to tweak the behavior of Gandi Registrar for WHMCS. To do so, just change values in the global array named `GANDI_REGISTRAR_OPTIONS`. The meaning of the keys are:
-- `allowNameserversChange` - _(boolean)_ - If false, it will fully prevent the customer to change the name servers. It is only useful if you choose Gandi LiveDNS as DNS.
+
 
 ## Contributing
 
