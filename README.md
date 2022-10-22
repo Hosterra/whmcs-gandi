@@ -23,10 +23,11 @@ Use Gandi.net as registrar in WHMCS.
 > 💡️️ The WHMCS IDProtect operations are not implemented in this module: by default, all anonymization options are enabled for TLDs supporting it, whatever is specified for each individual TLD.
 
 ## How to install
-1. In your WHCMS installation, in the `modules/registrars`, create a `gandi` directory.
+1. In your WHCMS installation, in the `modules/registrars/`, create a `gandi` directory.
 2. Download the last [release](https://github.com/Hosterra/whmcs-gandi/releases).
 3. Unzip & copy all files in the `gandi` directory.
-4. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
+4. Copy the file named `additionalfields.php` from `modules/registrars/gandi/resources/domains/` to `resources/domains/` - OR make a symbolic link if your operating system allows it.
+5. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
 
 ## How to configure
 
