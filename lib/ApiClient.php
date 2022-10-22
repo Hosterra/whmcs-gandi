@@ -6,6 +6,7 @@ class ApiClient {
     private $endPoint;
     private $apiKey;
 	private $registrar = GANDI_REGISTRAR_PRODUCT_NAME;
+	private static $cache = [];
 
 	public function __construct( $apiKey, $testMode = true ) {
 		$this->endPoint = $testMode?"https://api.gandi.net/v5":"https://api.gandi.net/v5";
@@ -14,7 +15,7 @@ class ApiClient {
 	
     public function getDomainInfo( $domain, $associative = false) {
         $url = "{$this->endPoint}/domain/domains/{$domain}";
-        $response = $this->sendRequest( $url, 'GET' );
+        $response = $this->sendOrGetCached( $url, 'GET' );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response, $associative );
     }
@@ -24,7 +25,7 @@ class ApiClient {
         if ( $organization ) {
             $url .= "?sharing_id={$organization}";
         }
-        $owner = $this->generateOwner($domain, $contacts);
+        $owner = $this->generateOwner( $domain, $contacts );
         $params = [
             'fqdn' => $domain,
             'duration' => $period,
@@ -41,15 +42,15 @@ class ApiClient {
 				$params['nameservers'] = $nameservers;
 			}
 		}
-        $response = $this->sendRequest($url, 'POST', $params);
+        $response = $this->sendOrGetCached( $url, 'POST', $params );
         logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
         return json_decode( $response );
     }
 
     public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $organization = '' ) {
-        foreach ($nameservers as $k => $v) {
+        foreach ( $nameservers as $k => $v ) {
             if (!$v) {
-                unset($nameservers[$k]);
+                unset( $nameservers[$k] );
             }
         }
         $url = "{$this->endPoint}/domain/transferin";
@@ -73,7 +74,7 @@ class ApiClient {
 			    $params['nameservers'] = $nameservers;
 		    }
 	    }
-        $response = $this->sendRequest( $url, 'POST', $params );
+        $response = $this->sendOrGetCached( $url, 'POST', $params );
         logModuleCall( $this->registrar, __FUNCTION__, $params, $response);
         return json_decode( $response );
     }
@@ -106,10 +107,10 @@ class ApiClient {
             'streetaddr' => $contacts['owner']['address'],
             'phone' => $contacts['owner']['phonenumberformatted'],
             'state' => $contacts['owner']['state'],
-            'type' => (empty($contacts['owner']['orgname']) ? 'individual' : 'company'), // One of: 'individual', 'company', 'association', 'publicbody', 'reseller'
+            'type' => ( empty( $contacts['owner']['orgname'] ) ? 'individual' : 'company' ),
             'email' => $contacts['owner']['email'],
-	        'data_obfuscated' => true,  //Forces ID Protect
-            'mail_obfuscated' => true,  //Forces ID Protect
+	        'data_obfuscated' => true,  // Forces ID Protect
+            'mail_obfuscated' => true,  // Forces ID Protect
         ];
         if ( in_array( $owner['country'], ['GF', 'GP', 'MQ', 'RE', 'YT'] ) ) {
             $owner['state']   = 'FR-' . $owner['country'];
@@ -131,7 +132,7 @@ class ApiClient {
     */
     public function getDomainAvailability( string $domain ) {
         $url = "{$this->endPoint}/domain/check?name={$domain}";
-        $response = json_decode( $this->sendRequest( $url, 'GET' ) );
+        $response = json_decode( $this->sendOrGetCached( $url, 'GET' ) );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response);
         return $response->products[0]->status;
     }
@@ -150,7 +151,7 @@ class ApiClient {
 		$params = [
 			'clientTransferProhibited' => $locked
 		];
-		$response = $this->sendRequest( $url, 'PATCH', $params );
+		$response = $this->sendOrGetCached( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 		return json_decode( $response );
 	}
@@ -168,7 +169,7 @@ class ApiClient {
 		$params = [
 			'action' => 'resend'
 		];
-		$response = $this->sendRequest( $url, 'PATCH', $params );
+		$response = $this->sendOrGetCached( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 		return json_decode( $response );
 	}
@@ -182,7 +183,7 @@ class ApiClient {
     */
     public function getDomainList() {
         $url = "{$this->endPoint}/domain/domains";
-        $response = $this->sendRequest( $url, 'GET' );
+        $response = $this->sendOrGetCached( $url, 'GET' );
         logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
         return json_decode( $response );
     }
@@ -197,7 +198,7 @@ class ApiClient {
     */
     public function getDomainContacts( string $domain ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/contacts";
-        $response = $this->sendRequest( $url, 'GET' );
+        $response = $this->sendOrGetCached( $url, 'GET' );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -213,7 +214,7 @@ class ApiClient {
     */
     public function getDomainNameservers( string $domain ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/nameservers";
-        $response = $this->sendRequest( $url, 'GET' );
+        $response = $this->sendOrGetCached( $url, 'GET' );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -235,7 +236,7 @@ class ApiClient {
         $params = [
             'duration' => $period
         ];
-        $response = $this->sendRequest( $url, 'POST', $params );
+        $response = $this->sendOrGetCached( $url, 'POST', $params );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -255,7 +256,7 @@ class ApiClient {
         $params = [
             'nameservers' => $nameservers
         ];
-        $response = $this->sendRequest( $url, 'PUT', $params );
+        $response = $this->sendOrGetCached( $url, 'PUT', $params );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -275,6 +276,7 @@ class ApiClient {
         $owner = (object) $contacts['Owner'];
 		$owner->data_obfuscated = true;
 	    $owner->mail_obfuscated = true;
+	    $owner->type = 0;
         $admin = (object) $contacts['Admin'];
         $admin->type = 0;
 	    $admin->data_obfuscated = true;
@@ -284,7 +286,8 @@ class ApiClient {
 	    $tech->data_obfuscated = true;
 	    $tech->mail_obfuscated = true;
         $billing = (object) $contacts['Billing'];
-        $billing->type = 0;
+        $billing->type = 2;
+	    $billing->orgname = 'bbbbb';
 	    $billing->data_obfuscated = true;
 	    $billing->mail_obfuscated = true;
         $params = [
@@ -315,7 +318,7 @@ class ApiClient {
             'name' => $name,
             'ips' => [$ip]
         ];
-        $response = $this->sendRequest( $url, 'POST', $params );
+        $response = $this->sendOrGetCached( $url, 'POST', $params );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -331,7 +334,7 @@ class ApiClient {
     */
     public function deleteNameserver( string $domain, string $name ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/hosts/{$name}";
-        $response = $this->sendRequest( $url, 'DELETE', [] );
+        $response = $this->sendOrGetCached( $url, 'DELETE', [] );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -352,7 +355,7 @@ class ApiClient {
         $params = [
             'ips' => [$ip]
         ];
-        $response = $this->sendRequest( $url, 'PUT', $params );
+        $response = $this->sendOrGetCached( $url, 'PUT', $params );
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response );
     }
@@ -367,7 +370,7 @@ class ApiClient {
      */
 	public function getLiveDnsInfo(string $domain) {
 		$url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-		$response = $this->sendRequest( $url, 'GET' );
+		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 		return json_decode( $response );
 	}
@@ -382,11 +385,10 @@ class ApiClient {
 	*/
 	public function enableLiveDNS( string $domain ) {
 		$url = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-		$response = $this->sendRequest( $url, 'POST' );
+		$response = $this->sendOrGetCached( $url, 'POST' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 		return json_decode( $response );
 	}
-
 
 	/*
 	*
@@ -395,12 +397,40 @@ class ApiClient {
 	* @return array
 	*
 	*/
-
 	public function getOrganizations() {
 		$url = "{$this->endPoint}/organization/organizations";
-		$response = $this->sendRequest( $url, 'GET' );
+		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
 		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Get TLD prices
+	*
+	* Available actions: add,create,remove,release,activate,deactivate,renew,restore,transfer,change_owner,transfer_reseller,update,delete
+	*
+	* @return array
+	*
+	*/
+	public function getTLDPrices( $action, $organization = '' ) {
+		$url = "{$this->endPoint}/billing/price/domain?processes={$action}";
+		if ( $organization ) {
+			$url .= "&sharing_id={$organization}";
+		}
+		$response = $this->sendOrGetCached( $url, 'GET' );
+		logModuleCall( $this->registrar, __FUNCTION__, $action, $response );
+		return json_decode( $response );
+	}
+
+	private function sendOrGetCached ( $url, $method = 'GET', $post = [], $timeout = 30 ) {
+		if ( 'GET' !== $method ) {
+			return $this->sendRequest ( $url, $method, $post, $timeout );
+		}
+		if ( ! array_key_exists( $url, self::$cache ) ) {
+			self::$cache[ $url ] = $this->sendRequest ( $url, $method, $post, $timeout );
+		}
+		return self::$cache[ $url ];
 	}
 
     private function sendRequest ( $url, $method = 'GET', $post = [], $timeout = 30 ) {
