@@ -95,48 +95,68 @@ function gandi_GetTranslations( $key ) {
  */
 function gandi_getConfigArray( $params ) {
 	gandi_LoadTranslations( $params );
-    try{
-        $api              = new ApiClient( $params["apiKey"] );
-        $organizationList = [];
-        $organizations    = $api->getOrganizations();
-        if( is_array( $organizations ) ){
-            foreach( $organizations as $organization ){
-                $organizationsList[$organization->id] = $organization->name;
-            }
-        }
-    } catch ( Exception $e ) {
-		// How/where to log?
-    }
-    return [
-        'FriendlyName' => [
-            'Type' => 'System',
-            'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
-        ],
-        'apiKey' => [
-            'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
-            'Type' => 'password',
-            'Size' => '100',
-        ],
-        'organization' => [
-	        'FriendlyName' => gandi_GetTranslations( 'admin.organization' ),
-	        'Type' => 'dropdown',
-	        'Options' => $organizationsList,
-        ],
-        'dns' => [
-	        'FriendlyName' => gandi_GetTranslations( 'admin.dns' ),
-	        'Type' => 'dropdown',
-	        'Options' => [
-		        'livedns' => gandi_GetTranslations( 'admin.dns.livedns' ),
-		        'whmcs' => gandi_GetTranslations( 'admin.dns.whmcs' ),
-	        ],
-        ],
-        'version' => [
-	        'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
-	        'Type' => 'text',
-	        'Size' => '100',
-	        'Disabled' => true,
-	        'Placeholder' => gandi_GetTranslations( 'admin.sponsor' ),
-        ],
+	if ( array_key_exists( 'apiKey', $params ) && '' !== $params['apiKey'] ) {
+		try {
+			$api              = new ApiClient( $params['apiKey'] );
+			$organizationList = [];
+			$organizations    = $api->getOrganizations();
+			if ( is_array( $organizations ) ) {
+				foreach( $organizations as $organization ){
+					$organizationsList[$organization->id] = $organization->name;
+				}
+			}
+		} catch ( Exception $e ) {
+			// How/where to log?
+		}
+		return [
+			'FriendlyName' => [
+				'Type' => 'System',
+				'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
+			],
+			'apiKey' => [
+				'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
+				'Type' => 'password',
+				'Size' => '100',
+			],
+			'organization' => [
+				'FriendlyName' => gandi_GetTranslations( 'admin.organization' ),
+				'Type' => 'dropdown',
+				'Options' => $organizationsList,
+			],
+			'dns' => [
+				'FriendlyName' => gandi_GetTranslations( 'admin.dns' ),
+				'Type' => 'dropdown',
+				'Options' => [
+					'livedns' => gandi_GetTranslations( 'admin.dns.livedns' ),
+					'whmcs' => gandi_GetTranslations( 'admin.dns.whmcs' ),
+				],
+			],
+			'version' => [
+				'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
+				'Type' => 'text',
+				'Size' => '100',
+				'Disabled' => true,
+				'Placeholder' => gandi_GetTranslations( 'admin.sponsor' ),
+			],
+		];
+	}
+	return [
+		'FriendlyName' => [
+			'Type' => 'System',
+			'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
+		],
+		'apiKey' => [
+			'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
+			'Type' => 'password',
+			'Size' => '100',
+		],
+		'version' => [
+			'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
+			'Type' => 'text',
+			'Size' => '100',
+			'Disabled' => true,
+			'Placeholder' => gandi_GetTranslations( 'admin.sponsor' ),
+		],
     ];
 }
 
@@ -159,11 +179,6 @@ function gandi_getConfigArray( $params ) {
 function gandi_RegisterDomain( $params ) {
 	gandi_LoadTranslations( $params );
 	/*highlight_string("<?php\n \n" . var_export($params, true) . ";\n?>");die();*/
-    if ( 'individual' === $params['accountType'] ){
-        $organization = '';
-    } else {
-        $organization = $params['organization'];
-    }
     $sld                = $params['sld'];
     $tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
@@ -202,7 +217,7 @@ function gandi_RegisterDomain( $params ) {
                 'error' => $availability
             ];
         }
-        $response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $organization );
+        $response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['organization'] );
         if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
             return [
                    'error' => json_encode( $response )
@@ -236,11 +251,6 @@ function gandi_RegisterDomain( $params ) {
  */
 function gandi_TransferDomain( $params ) {
 	gandi_LoadTranslations( $params );
-	if ( 'individual' === $params['accountType'] ){
-		$organization = '';
-	} else {
-		$organization = $params['organization'];
-	}
 	$sld                = $params['sld'];
 	$tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
@@ -261,7 +271,7 @@ function gandi_TransferDomain( $params ) {
 		'firstname' => $params['firstname'],
 		'lastname' => $params['lastname'],
 		'email' => $params['email'],
-		'address' => $params['address1'],
+		'address' => $params['address1'] . $params['address2'],
 		'city' => $params['city'],
 		'postcode' =>  $params['postcode'],
 		'countrycode' => $params['countrycode'],
@@ -274,7 +284,7 @@ function gandi_TransferDomain( $params ) {
 	];
 	try {
 		$api      = new ApiClient( $params['apiKey'] );
-        $response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $organization );
+        $response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['organization'] );
 	    if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 		    return [
 			    'error' => json_encode( $response )
@@ -308,18 +318,13 @@ function gandi_TransferDomain( $params ) {
  */
 function gandi_RenewDomain( $params ) {
 	gandi_LoadTranslations( $params );
-	if ( 'individual' === $params['accountType'] ){
-		$organization = '';
-	} else {
-		$organization = $params['organization'];
-	}
 	$sld                = $params['sld'];
 	$tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
 	$registrationPeriod = $params['regperiod'];
 	try {
 		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->renewDomain( $domain, $registrationPeriod, $organization );
+		$response = $api->renewDomain( $domain, $registrationPeriod, $params['organization'] );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
