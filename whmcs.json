@@ -1,0 +1,27 @@
+{
+  "schema": "1.0",
+  "type": "whmcs-registrars",
+  "name": "gandi",
+  "license": "MIT",
+  "category": "domains",
+  "description": {
+    "name": "Gandi Registrar",
+    "tagline": "A full featured integration to resel Gandi domains.",
+    "long": "The sample files here demonstrates how a registrar module for WHMCS should be structured and exercises all supported functionality.",
+    "features": [
+      "Provide functionality for registering, transferring and renewing of domains"
+    ]
+  },
+  "logo": {
+    "filename": "logo.gif"
+  },
+  "support": {
+    "homepage": "https:\/\/github.com\/Hosterra\/whmcs-gandi"
+  },
+  "authors": [
+    {
+      "name": "Hosterra",
+      "homepage": "https:\/\/hosterra.eu"
+    }
+  ]
+}
