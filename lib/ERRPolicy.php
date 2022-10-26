@@ -934,6 +934,9 @@ class ERRPolicy {
     ];
 
 	private static function getValue( $tld, $idx, $default ) {
+		if ( 1 < $idx ) {
+			return $default;
+		}
 		if ( ! array_key_exists( $tld, self::$errp ) ) {
 			return $default;
 		}

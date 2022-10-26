@@ -5,28 +5,28 @@ Use Gandi.net as registrar in WHMCS.
 ![PHP 7.x Compatibility](https://img.shields.io/badge/PHP-7.x-7c86b4?style=flat-square) ![WHCMS 8.5.x Compatibility](https://img.shields.io/badge/WHMCS-8.5.x-96be4f?style=flat-square)
 
 ## Features
-### Global
-- DNS support for self managed and Gandi LiveDNS
-- Automatic query caching
-### Per TLD 
-- x
-### Per domain
+- TLD prices import: **_supported_**
+- TLD grace and redemption details: **_supported_**
 - Registration operations: **_supported_**
 - Renewal operations: **_supported_**
 - Transfer operations: **_supported_**
 - Transfer protection (lock/unlock): **_supported_**
 - EPP management: **_supported_**
-- WHOIS privacy protection: **_supported_** (see following note about IDProtect)
+- WHOIS privacy protection: **_supported_** (see following note about ID Protect)
 - Delete operations: **_not supported_**
 - Release operations: **_not supported_**
 
-> 💡️️ The WHMCS IDProtect operations are not implemented in this module: by default, all anonymization options are enabled for TLDs supporting it, whatever is specified for each individual TLD.
+> 💡️️ The WHMCS IDProtect operations are not implemented in this module: by default, all anonymization options are enforced for TLDs supporting it, whatever is specified for each individual TLD.
+
+## Technical
+- DNS support for self managed and Gandi LiveDNS
+- Automatic query caching
 
 ## How to install
 1. In your WHCMS installation, in the `modules/registrars/`, create a `gandi` directory.
 2. Download the last [release](https://github.com/Hosterra/whmcs-gandi/releases).
 3. Unzip & copy all files in the `gandi` directory.
-4. Copy the file named `additionalfields.php` from `modules/registrars/gandi/resources/domains/` to `resources/domains/` - OR make a symbolic link if your operating system allows it.
+4. Copy the file named `additionalfields.php` from `modules/registrars/gandi/resources/domains/` to `resources/domains/` - OR, better, make a symbolic link if your operating system allows it.
 5. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
 
 ## How to configure

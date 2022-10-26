@@ -10,11 +10,14 @@ define( 'GANDI_REGISTRAR_API_VERSION', '5' );
 define( 'GANDI_REGISTRAR_VERSION', '5.0.0' );
 
 use WHMCS\Carbon;
+use WHMCS\Domain\TopLevel\ImportItem;
+use WHMCS\Results\ResultsList;
 use WHMCS\Domain\Registrar\Domain;
-use WHMCS\Domains\DomainLookup\ResultsList;
+use WHMCS\Domains\DomainLookup\ResultsList as LookupResultsList;
 use WHMCS\Domains\DomainLookup\SearchResult;
 use WHMCS\Module\Registrar\Gandi\ApiClient;
 use WHMCS\Module\Registrar\Gandi\LiveDNS;
+use WHMCS\Module\Registrar\Gandi\ERRPolicy;
 
 require_once dirname(__FILE__) . '/lib/LiveDNS.php';
 
@@ -67,12 +70,63 @@ function gandi_LoadTranslations( $reference ) {
  * @return string
  */
 function gandi_GetTranslations( $key ) {
-	if ( defined( 'GANDI_LANG' ) ) {
-		if ( is_array( GANDI_LANG ) && array_key_exists( $key, GANDI_LANG ) ) {
-			return GANDI_LANG[$key];
-		}
+	if ( defined( 'GANDI_LANG' ) && is_array( GANDI_LANG ) && array_key_exists( $key, GANDI_LANG ) ) {
+		return GANDI_LANG[$key];
 	}
 	return $key;
+}
+
+/**
+ * Get TLDs details for specific action
+ *
+ * @return array
+ */
+function gandi_GetTLDs( $params, $action ) {
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->getTLDPrices( $action, $params['organization'] );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [];
+		}
+		$result                     = [];
+		$result['misc']['currency'] = (string) $response->currency;
+		$result['tlds']             = [];
+		foreach ( $response->products as $product ) {
+			if ( 'available' === (string) $product->status ) {
+				$p = 0.0;
+				$minY = 10;
+				$maxY = 1;
+				foreach ( $product->prices as $price ) {
+					switch ( $action ) {
+						case 'create':
+							if ( 'golive' === (string) $price->options->phase && ! $price->discount ) {
+								$p = max( $p, (float) $price->price_before_taxes );
+								$minY = min( $minY, $price->min_duration );
+								$maxY = max( $maxY, $price->max_duration );
+							}
+							break;
+						case 'renew':
+						case 'transfer':
+						case 'restore':
+							if ( ! $price->discount ) {
+								$p = max( $p, (float) $price->price_before_taxes );
+							}
+							break;
+					}
+				}
+				if ( 0.0 < $p ) {
+					$result['tlds'][ $product->name ][$action] = $p;
+					if ( 'create' === $action ) {
+						$result['tlds'][ $product->name ]['minY']  = $minY;
+						$result['tlds'][ $product->name ]['maxY']  = $maxY;
+					}
+				}
+			}
+		}
+		return $result;
+	} catch ( \Exception $e ) {
+		return [];
+	}
 }
 
 /**
@@ -158,6 +212,50 @@ function gandi_getConfigArray( $params ) {
 			'Placeholder' => gandi_GetTranslations( 'admin.sponsor' ),
 		],
     ];
+}
+
+/**
+ * Get current tld pricing
+ *
+ * @return WHMCS\Results\ResultsList
+ */
+function gandi_GetTldPricing( $params ) {
+	$currency    = 'USD';
+	$results     = new ResultsList;
+	$creation    = gandi_GetTLDs( $params, 'create' );
+	$renewal     = gandi_GetTLDs( $params, 'renew' );
+	$transfer    = gandi_GetTLDs( $params, 'transfer' );
+	$restoration = gandi_GetTLDs( $params, 'restore' );
+	if ( array_key_exists( 'misc', $creation ) && array_key_exists( 'currency', $creation['misc'] ) ) {
+		$currency = $creation['misc']['currency'];
+	}
+	if ( array_key_exists( 'tlds', $creation ) && is_array( $creation['tlds'] ) ) {
+		foreach ( $creation['tlds'] as $tld => $price ) {
+			if ( array_key_exists( 'create', $price ) && array_key_exists( 'minY', $price ) && array_key_exists( 'maxY', $price ) ) {
+				$item = new ImportItem;
+				$item->setExtension( $tld );
+				$item->setCurrency( $currency );
+				$item->setEppRequired( true );
+				$item->setMinYears( $price['minY'] );
+				$item->setMaxYears( $price['maxY'] );
+				$item->setRegisterPrice( $price['create'] );
+				if ( array_key_exists( 'tlds', $renewal ) && is_array( $renewal['tlds'] ) && array_key_exists( $tld, $renewal['tlds'] ) && is_array( $renewal['tlds'][$tld] ) && array_key_exists( 'renew', $renewal['tlds'][$tld] ) ) {
+					$item->setRenewPrice( $renewal['tlds'][$tld]['renew'] );
+					$item->setGraceFeePrice( $renewal['tlds'][$tld]['renew'] );
+					$item->setGraceFeeDays( ERRPolicy::getGrace( $tld ) );
+				}
+				if ( array_key_exists( 'tlds', $transfer ) && is_array( $transfer['tlds'] ) && array_key_exists( $tld, $transfer['tlds'] ) && is_array( $transfer['tlds'][$tld] ) && array_key_exists( 'transfer', $transfer['tlds'][$tld] ) ) {
+					$item->setTransferPrice( $transfer['tlds'][$tld]['transfer'] );
+				}
+				if ( array_key_exists( 'tlds', $restoration ) && is_array( $restoration['tlds'] ) && array_key_exists( $tld, $restoration['tlds'] ) && is_array( $restoration['tlds'][$tld] ) && array_key_exists( 'restore', $restoration['tlds'][$tld] ) ) {
+					$item->setRedemptionFeePrice( $restoration['tlds'][$tld]['restore'] );
+					$item->setRedemptionFeeDays( ERRPolicy::getRedemption( $tld ) );
+				}
+				$results[] = $item;
+			}
+		}
+	}
+	return $results;
 }
 
 /**
@@ -749,7 +847,7 @@ function gandi_CheckAvailability($params)
 {
 	gandi_LoadTranslations( $params );
     try {
-        $results = new ResultsList();
+        $results = new LookupResultsList();
         $sld = $params['sld'];
         $api = new ApiClient($params["apiKey"]);
         foreach ($params['tlds'] as $tld) {
