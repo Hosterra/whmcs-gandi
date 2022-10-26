@@ -8,6 +8,11 @@ define( 'GANDI_REGISTRAR_PRODUCT_NAME', 'Gandi Registrar' );
 define( 'GANDI_REGISTRAR_PRODUCT_URL', 'https://github.com/Hosterra/whmcs-gandi' );
 define( 'GANDI_REGISTRAR_API_VERSION', '5' );
 define( 'GANDI_REGISTRAR_VERSION', '5.0.0' );
+define( 'GANDI_LANG_DIR', dirname(__FILE__) . '/lang/' );
+define( 'GANDI_RESOURCE_DIR', dirname(__FILE__) . '/resources/' );
+define( 'GANDI_CONTACT_TYPES', [ 'individual', 'company', 'association', 'publicbody', 'reseller'] );
+
+
 
 use WHMCS\Carbon;
 use WHMCS\Domain\TopLevel\ImportItem;
@@ -20,13 +25,6 @@ use WHMCS\Module\Registrar\Gandi\LiveDNS;
 use WHMCS\Module\Registrar\Gandi\ERRPolicy;
 
 require_once dirname(__FILE__) . '/lib/LiveDNS.php';
-
-add_hook('ClientAreaPageDomainContacts', PHP_INT_MIN, function($vars) {
-
-	/*highlight_string("<?php\n \n" . var_export($aInt, true) . ";\n?>");die();*/
-	/*$vars['templatefile'] = 'clientareadomaindetails';
-	return array("templatefile" => $vars['templatefile']);*/
-});
 
 /**
  * Define module related metadata
@@ -48,16 +46,18 @@ function gandi_MetaData() {
  */
 function gandi_LoadTranslations( $reference ) {
 	if ( ! defined( 'GANDI_LANG' ) ) {
-		$lang = 'english';
+		$lang = 'none';
 		if ( array_key_exists( 'language', $reference ) ) {
 			$lang = strtolower( $reference['language'] );
+		} elseif ( array_key_exists( 'activeLocale', $reference ) && is_array( $reference['activeLocale'] ) && array_key_exists( 'language', $reference['activeLocale'] )  ) {
+			$lang = strtolower( $reference['activeLocale']['language'] );
 		} else {
 			global $aInt;
 			if ( isset( $aInt ) ) {
 				$lang = strtolower( $aInt->language );
 			}
 		}
-		$filename = dirname(__FILE__) . '/lang/' . $lang . '.php';
+		$filename = GANDI_LANG_DIR . $lang . '.php';
 		if ( file_exists( $filename ) ) {
 			include $filename;
 		}
@@ -127,6 +127,51 @@ function gandi_GetTLDs( $params, $action ) {
 	} catch ( \Exception $e ) {
 		return [];
 	}
+}
+
+/**
+ * Clean and normalize contact for outputting it
+ *
+ * @return array
+ */
+function gandi_NormalizeContactOutput( $contact ) {
+	if ( array_key_exists( 'extra_parameters', $contact ) ) {
+		unset( $contact['extra_parameters'] );
+	}
+	if ( array_key_exists( 'data_obfuscated', $contact ) ) {
+		unset( $contact['data_obfuscated'] );
+	}
+	if ( array_key_exists( 'mail_obfuscated', $contact ) ) {
+		unset( $contact['mail_obfuscated'] );
+	}
+	if ( array_key_exists( 'same_as_owner', $contact ) ) {
+		unset( $contact['same_as_owner'] );
+	}
+	if ( array_key_exists( 'phone', $contact ) ) {
+		$contact['phone'] = '+' . preg_replace("/[^0-9]/", "", $contact['phone'] );
+	}
+	if ( ! array_key_exists( 'orgname', $contact ) ) {
+		$contact['orgname'] = '';
+	}
+	if ( array_key_exists( 'type', $contact ) ) {
+		if ( is_int( $contact['type'] ) && $contact['type'] < count( GANDI_CONTACT_TYPES ) ) {
+			$contact['type'] = GANDI_CONTACT_TYPES[ $contact['type'] ];
+		}
+	} else {
+		$contact['type'] = GANDI_CONTACT_TYPES[0];
+	}
+	if ( ! in_array( $contact['type'], GANDI_CONTACT_TYPES ) ) {
+		$contact['type'] = GANDI_CONTACT_TYPES[0];
+	}
+	$sortedContact = [];
+	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+		if ( 'phone' === $key ) {
+			$sortedContact['phonenumber'] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
+		} else {
+			$sortedContact[ $key ] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
+		}
+	}
+	return $sortedContact;
 }
 
 /**
@@ -620,30 +665,11 @@ function gandi_GetContactDetails( $params ) {
 	try {
 		$api = new ApiClient( $params['apiKey'] );
 		$contacts = $api->getDomainContacts( $domain );
-		$owner = (array) $contacts->owner;
-		unset( $owner['extra_parameters'] );
-		unset( $owner['data_obfuscated'] );
-		unset( $owner['mail_obfuscated'] );
-		$admin = (array) $contacts->admin;
-		unset( $admin['extra_parameters'] );
-		unset( $admin['data_obfuscated'] );
-		unset( $admin['mail_obfuscated'] );
-		unset( $admin['same_as_owner'] );
-		$billing = (array) $contacts->bill;
-		unset( $billing['extra_parameters'] );
-		unset( $billing['data_obfuscated'] );
-		unset( $billing['mail_obfuscated'] );
-		unset( $billing['same_as_owner'] );
-		$tech = (array) $contacts->tech;
-		unset( $tech['extra_parameters'] );
-		unset( $tech['data_obfuscated'] );
-		unset( $tech['mail_obfuscated'] );
-		unset( $tech['same_as_owner'] );
 		return [
-			'Owner' => $owner,
-			'Technical' => $tech,
-			'Billing' => $billing,
-			'Admin' => $admin
+			'Owner' => gandi_NormalizeContactOutput( (array) $contacts->owner ),
+			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->admin ),
+			'Billing' => gandi_NormalizeContactOutput( (array) $contacts->bill ),
+			'Admin' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
 		];
 	} catch ( \Exception $e ) {
 		return [
@@ -672,7 +698,7 @@ function gandi_SaveContactDetails( $params ) {
 	$domain = $sld . '.' . $tld;
 	try {
 		$api = new ApiClient( $params['apiKey'] );
-		$response = $api->updateDomainContacts( $domain, $params['contactdetails'] );
+		//$response = $api->updateDomainContacts( $domain, $params['contactdetails'] );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
 			return [
 				'error' => json_encode( $response )
@@ -1251,3 +1277,30 @@ function gandi_TransferSync($params)
         );
     }
 }
+
+
+/////// HOOKS
+
+add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
+	gandi_LoadTranslations( $vars );
+	$contactdetailstranslations = [];
+	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'phonenumber', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+		$contactdetailstranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
+	}
+	$entitytranslations = [];
+	$entitytranslations['individual'] = gandi_GetTranslations( 'admin.entity.individual');
+	$entitytranslations['company'] = gandi_GetTranslations( 'admin.entity.company');
+	$entitytranslations['association'] = gandi_GetTranslations( 'admin.entity.association');
+	$entitytranslations['publicbody'] = gandi_GetTranslations( 'admin.entity.publicbody');
+	$filename = GANDI_RESOURCE_DIR . 'countries/countrycodes.php';
+	if ( file_exists( $filename ) ) {
+		include $filename;
+	} else {
+		$country_list = [];
+	}
+	return [
+		'contactdetailstranslations' => $contactdetailstranslations,
+		'entitytranslations' => $entitytranslations,
+		'countrylist' => $country_list,
+	];
+});
