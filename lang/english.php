@@ -15,4 +15,18 @@ define( 'GANDI_LANG', [
 	'admin.dns' => "DNS to use",
 	'admin.dns.livedns' => "Gandi LiveDNS",
 	'admin.dns.whmcs' => "Other",
+	'admin.contact.type' => "Entity type",
+	'admin.contact.orgname' => "Name of the company, association or organization",
+	'admin.contact.given' => "First name",
+	'admin.contact.family' => "Last name",
+	'admin.contact.email' => "Email",
+	'admin.contact.phonenumber' => "Phone number",
+	'admin.contact.streetaddr' => "Street address",
+	'admin.contact.city' => "City",
+	'admin.contact.zip' => "Zip code",
+	'admin.entity.individual' => "Individual",
+	'admin.entity.company' => "Company",
+	'admin.entity.association' => "Association",
+	'admin.entity.publicbody' => "Public body",
+
 ] );
