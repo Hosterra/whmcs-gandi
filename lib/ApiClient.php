@@ -19,6 +19,13 @@ class ApiClient {
         logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
         return json_decode( $response, $associative );
     }
+
+	public function getTransferInfo( $domain, $associative = false) {
+		$url = "{$this->endPoint}/domain/transferin/{$domain}";
+		$response = $this->sendOrGetCached( $url, 'GET' );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+		return json_decode( $response, $associative );
+	}
     
     public function registerDomain( $domain, $contacts, $nameservers, $period, $organization = '' ) {
         $url = "{$this->endPoint}/domain/domains";

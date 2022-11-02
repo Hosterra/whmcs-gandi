@@ -578,7 +578,6 @@ function gandi_GetEPPCode( $params ) {
 			'error' => $e->getMessage(),
 		];
 	}
-
 }
 
 /**
@@ -839,11 +838,10 @@ function gandi_Sync( $params ) {
 			];
 		}
 		if ( ! in_array( $code, [401, 403, 404] ) ) {
-			$expired = strtotime( $request->dates->registry_ends_at ) < time() ;
 			return [
-				'expirydate' => date( "Y-m-d", strtotime( $request->dates->registry_ends_at ) ),
+				'expirydate' => date( 'Y-m-d', strtotime( $request->dates->registry_ends_at ) ),
 				'active' => true,
-				'expired' => $expired,
+				'expired' => strtotime( $request->dates->registry_ends_at ) < time(),
 				'transferredAway' => false,
 			];
 		}
@@ -854,7 +852,48 @@ function gandi_Sync( $params ) {
 	}
 }
 
-
+/**
+ * Incoming Domain Transfer Sync.
+ *
+ * Check status of incoming domain transfers and notify end-user upon
+ * completion. This function is called daily for incoming domains.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_TransferSync( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api     = new ApiClient( $params['apiKey'] );
+		$request = $api->getDomainInfo( $domain );
+		if ( 403 === $request->code || 404 === $request->code ) { // not finished
+			return [
+				'completed' => false,
+				'failed' => false
+			];
+		}
+		return [
+			'expirydate' => date( 'Y-m-d', strtotime( $request->dates->registry_ends_at ) ),
+			'completed' => true,
+			'failed' => false,
+			'reason' => '',
+			'error' => ''
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'failed' => true,
+			'completed' => false,
+			'reason' => 'Transfer Error',
+			'error' => $e->getMessage()
+		];
+	}
+}
 
 
 
@@ -1089,94 +1128,6 @@ function gandi_RenewDomain( $params ) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//TODO: registrarmodule_TransferSync
-/**
- * Incoming Domain Transfer Sync.
- *
- * Check status of incoming domain transfers and notify end-user upon
- * completion. This function is called daily for incoming domains.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function registrarmodule_TransferSync($params)
-{
-	gandi_LoadTranslations( $params );
-	// user defined configuration values
-	$userIdentifier = $params['APIUsername'];
-	$apiKey = $params['APIKey'];
-	$testMode = $params['TestMode'];
-	$accountMode = $params['AccountMode'];
-	$emailPreference = $params['EmailPreference'];
-
-	// domain parameters
-	$sld = $params['sld'];
-	$tld = $params['tld'];
-
-	// Build post data
-	$postfields = array(
-		'username' => $userIdentifier,
-		'password' => $apiKey,
-		'testmode' => $testMode,
-		'domain' => $sld . '.' . $tld,
-	);
-
-	try {
-		$api = new ApiClient();
-		$api->call('CheckDomainTransfer', $postfields);
-
-		if ($api->getFromResponse('transfercomplete')) {
-			return array(
-				'completed' => true,
-				'expirydate' => $api->getFromResponse('expirydate'), // Format: YYYY-MM-DD
-			);
-		} elseif ($api->getFromResponse('transferfailed')) {
-			return array(
-				'failed' => true,
-				'reason' => $api->getFromResponse('failurereason'), // Reason for the transfer failure if available
-			);
-		} else {
-			// No status change, return empty array
-			return array();
-		}
-
-	} catch (\Exception $e) {
-		return array(
-			'error' => $e->getMessage(),
-		);
-	}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Check Domain Availability.
  *
@@ -1193,31 +1144,30 @@ function registrarmodule_TransferSync($params)
  *
  * @return \WHMCS\Domains\DomainLookup\ResultsList An ArrayObject based collection of \WHMCS\Domains\DomainLookup\SearchResult results
  */
-function gandi_CheckAvailability($params)
-{
+function gandi_CheckAvailability( $params ) {
 	gandi_LoadTranslations( $params );
     try {
         $results = new LookupResultsList();
         $sld = $params['sld'];
-        $api = new ApiClient($params["apiKey"]);
-        foreach ($params['tlds'] as $tld) {
+        $api = new ApiClient( $params['apiKey'] );
+        foreach ( $params['tlds'] as $tld ) {
             $tld = str_replace('.', '', $tld);
-            $searchResult = new SearchResult($sld, $tld);
+            $searchResult = new SearchResult( $sld, $tld );
             $domain = $sld . '.' . $tld;
-            $availability = $api->getDomainAvailability($domain);
-            if ($availability == 'available') {
+            $availability = $api->getDomainAvailability( $domain );
+            if ( 'available' === $availability ) {
                 $status = SearchResult::STATUS_NOT_REGISTERED;
             } else {
                 $status = SearchResult::STATUS_REGISTERED;
             }
-            $searchResult->setStatus($status);
-            $results->append($searchResult);
+            $searchResult->setStatus( $status );
+            $results->append( $searchResult );
         }
         return $results;
     } catch ( \Exception $e ) {
-        return array(
+        return [
             'error' => $e->getMessage(),
-        );
+        ];
     }
 }
 
@@ -1283,54 +1233,6 @@ function gandi_ClientArea($params)
 </div>
 HTML;
 	return $output.$GLOBALS['CONFIG']['Language'] . '        ' . \Lang::trans('gandi.whoisAnonymization');
-}
-
-
-
-/**
- * Sync Transfer Status & Expiration Date.
- *
- * Transfer syncing is intended to ensure transfer status and expiry date
- * changes made directly at the domain registrar are synced to WHMCS.
- * It is called periodically for a transfer.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_TransferSync($params)
-{
-	gandi_LoadTranslations( $params );
-    try {
-        $domain = $params['domain'];
-        $api = new ApiClient($params["apiKey"]);
-        $request = $api->getDomainInfo($domain);
-        if ($request->code == 403 || $request->code == 404) { // not finished
-            return array(
-                'completed' => false,
-                'failed' => false
-            );
-        }
-        if ($request->code != 404) {
-            $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
-            return array(
-                'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
-                'completed' => true, // Return true if the transfer is completed
-                'failed' => false,
-                'reason' => '',
-                'error' => ''
-            );
-        }
-    } catch ( \Exception $e ) {
-        return array(
-            'failed' => true,
-            'completed' => false,
-            'reason' => 'Transfer Error',
-            'error' => $e->getMessage()
-        );
-    }
 }
 
 
