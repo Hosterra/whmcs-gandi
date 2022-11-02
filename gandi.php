@@ -504,7 +504,6 @@ function gandi_SaveNameservers( $params ) {
 	try {
 		$api     = new ApiClient( $params['apiKey'] );
 		$request = $api->updateDomainNameservers( $domain, $nameservers );
-		logModuleCall( 'Gandi Registrar', __FUNCTION__, $nameservers, serialize( $request ) );
 		if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
 			throw new Exception( json_encode( $request ) );
 		}
@@ -1236,7 +1235,7 @@ HTML;
 }
 
 
-/////// HOOKS
+// HOOKS
 
 add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
 	gandi_LoadTranslations( $vars );
