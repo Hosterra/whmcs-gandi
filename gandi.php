@@ -378,9 +378,9 @@ function gandi_GetContactDetails( $params ) {
 		$contacts = $api->getDomainContacts( $domain );
 		return [
 			'Owner' => gandi_NormalizeContactOutput( (array) $contacts->owner ),
-			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->admin ),
+			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
 			'Billing' => gandi_NormalizeContactOutput( (array) $contacts->bill ),
-			'Admin' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
+			'Admin' => gandi_NormalizeContactOutput( (array) $contacts->admin ),
 		];
 	} catch ( \Exception $e ) {
 		return [
@@ -1241,7 +1241,7 @@ HTML;
 add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
 	gandi_LoadTranslations( $vars );
 	$contactdetailstranslations = [];
-	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'phonenumber', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'Phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
 		$contactdetailstranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
 	}
 	$contacttypestranslations = [];

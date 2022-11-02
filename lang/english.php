@@ -20,7 +20,7 @@ define( 'GANDI_LANG', [
 	'admin.contact.given' => "First name",
 	'admin.contact.family' => "Last name",
 	'admin.contact.email' => "Email",
-	'admin.contact.phonenumber' => "Phone number",
+	'admin.contact.Phone' => "Phone number",  // Warning: uppercase is important
 	'admin.contact.streetaddr' => "Street address",
 	'admin.contact.city' => "City",
 	'admin.contact.zip' => "Zip code",
