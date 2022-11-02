@@ -148,7 +148,7 @@ function gandi_NormalizeContactOutput( $contact ) {
 		unset( $contact['same_as_owner'] );
 	}
 	if ( array_key_exists( 'phone', $contact ) ) {
-		$contact['phone'] = '+' . preg_replace("/[^0-9]/", "", $contact['phone'] );
+		$contact['Phone'] = '+' . preg_replace("/[^0-9]/", "", $contact['phone'] );
 	}
 	if ( ! array_key_exists( 'orgname', $contact ) ) {
 		$contact['orgname'] = '';
@@ -164,14 +164,26 @@ function gandi_NormalizeContactOutput( $contact ) {
 		$contact['type'] = GANDI_CONTACT_TYPES[0];
 	}
 	$sortedContact = [];
-	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
-		if ( 'phone' === $key ) {
-			$sortedContact['phonenumber'] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
-		} else {
-			$sortedContact[ $key ] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
-		}
+	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'Phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+		$sortedContact[ $key ] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
 	}
 	return $sortedContact;
+}
+
+/**
+ * Clean and normalize contact before saving
+ *
+ * @return array
+ */
+function gandi_NormalizeContactInput( $contact ) {
+	$items = [];
+	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'Phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+		$items[ strtolower( $key ) ] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
+	}
+	if ( array_key_exists( 'orgname', $items ) && '' === $items['orgname'] ) {
+		$items['type'] = 'individual';
+	}
+	return $items;
 }
 
 /**
@@ -302,6 +314,339 @@ function gandi_GetTldPricing( $params ) {
 	}
 	return $results;
 }
+
+/**
+ * Get the current WHOIS Contact Information.
+ *
+ * Should return a multi-level array of the contacts and name/address
+ * fields that be modified.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_GetContactDetails( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api = new ApiClient( $params['apiKey'] );
+		$contacts = $api->getDomainContacts( $domain );
+		return [
+			'Owner' => gandi_NormalizeContactOutput( (array) $contacts->owner ),
+			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->admin ),
+			'Billing' => gandi_NormalizeContactOutput( (array) $contacts->bill ),
+			'Admin' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Update the WHOIS Contact Information for a given domain.
+ *
+ * Called when a change of WHOIS Information is requested within WHMCS.
+ * Receives an array matching the format provided via the `GetContactDetails`
+ * method with the values from the users input.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_SaveContactDetails( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$contacts = [];
+		foreach ( ['Owner', 'Technical', 'Billing', 'Admin'] as $contact ) {
+			$contacts[ $contact ] = gandi_NormalizeContactInput( $params['contactdetails'][ $contact ] );
+		}
+		$api = new ApiClient( $params['apiKey'] );
+		$response = $api->updateDomainContacts( $domain, $contacts );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		sleep( 5 );
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Fetch current nameservers.
+ *
+ * This function should return an array of nameservers for a given domain.
+ *
+ * @param array $params common module parameters
+ *
+ * @return array
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ */
+function gandi_GetNameservers( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api     = new ApiClient( $params['apiKey'] );
+		$request = $api->getDomainNameservers( $domain );
+		if ( ! is_array( $request ) ) {
+			return [
+				'success' => false
+			];
+		}
+		$response = [
+		];
+		foreach ( $request as $k => $v ) {
+			$index                     = $k + 1;
+			$response[ 'ns' . $index ] = $v;
+		}
+		return $response;
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Save nameserver changes.
+ *
+ * This function should submit a change of nameservers request to the
+ * domain registrar.
+ *
+ * @param array $params common module parameters
+ *
+ * @return array
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ */
+function gandi_SaveNameservers( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld         = $params['sld'];
+	$tld         = $params['tld'];
+	$domain      = $sld . '.' . $tld;
+	$nameservers = [];
+	if ( $params['ns1'] ) {
+		$nameservers[] = $params['ns1'];
+	}
+	if ( $params['ns2'] ) {
+		$nameservers[] = $params['ns2'];
+	}
+	if ( $params['ns3'] ) {
+		$nameservers[] = $params['ns3'];
+	}
+	if ( $params['ns4'] ) {
+		$nameservers[] = $params['ns4'];
+	}
+	if ( $params['ns5'] ) {
+		$nameservers[] = $params['ns5'];
+	}
+	try {
+		$api     = new ApiClient( $params['apiKey'] );
+		$request = $api->updateDomainNameservers( $domain, $nameservers );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $nameservers, serialize( $request ) );
+		if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
+			throw new Exception( json_encode( $request ) );
+		}
+		return [
+			'success' => true,
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Get registrar lock status.
+ *
+ * Also known as Domain Lock or Transfer Lock status.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return string|array Lock status or error message
+ */
+function gandi_GetRegistrarLock( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->getDomainInfo( $domain );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		if ( is_array( $response->status ) ) {
+			if ( in_array( 'clientTransferProhibited', $response->status ) && $response->can_tld_lock ) {
+				return 'locked';
+			}
+			return 'unlocked';
+		} else {
+			return [
+				'error' => 'No information about lock/unlock status'
+			];
+		}
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Set registrar lock status.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_SaveRegistrarLock( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld        = $params['sld'];
+	$tld        = $params['tld'];
+	$domain     = $sld . '.' . $tld;
+	$lockStatus = $params['lockenabled'];
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->setLockDomain( $domain, 'locked' === $lockStatus );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Request EEP Code.
+ *
+ * Supports both displaying the EPP Code directly to a user or indicating
+ * that the EPP Code will be emailed to the registrant.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ *
+ */
+function gandi_GetEPPCode( $params ) {
+	gandi_LoadTranslations( $params );
+	try {
+		$api = new ApiClient( $params['apiKey'] );
+		$request = $api->getDomainInfo( $params['domainname'] );
+		return [
+			'eppcode' => $request->authinfo,
+		];
+
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+
+}
+
+/**
+ * Resend reachability mail for contact validation
+ *
+ * @param array $params common module parameters
+ *
+ * @see ?
+ *
+ * @return array
+ */
+function gandi_ResendIRTPVerificationEmail( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api      = new ApiClient( $params['apiKey'] );
+		$response = $api->resendReachabilityMail( $domain );
+		if ( ( isset( $response->code ) && 202 < (int) $response->code ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+		return [
+			'success' => true
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Register a domain.
@@ -483,237 +828,9 @@ function gandi_RenewDomain( $params ) {
 	}
 }
 
-/**
- * Fetch current nameservers.
- *
- * This function should return an array of nameservers for a given domain.
- *
- * @param array $params common module parameters
- *
- * @return array
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- */
-function gandi_GetNameservers( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld    = $params['sld'];
-	$tld    = $params['tld'];
-	$domain = $sld . '.' . $tld;
-	try {
-		$api     = new ApiClient( $params['apiKey'] );
-		$request = $api->getDomainNameservers( $domain );
-		if ( ! is_array( $request ) ) {
-			return [
-				'success' => false
-			];
-		}
-		$response = [
-		];
-		foreach ( $request as $k => $v ) {
-			$index                     = $k + 1;
-			$response[ 'ns' . $index ] = $v;
-		}
-		return $response;
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
 
-/**
- * Save nameserver changes.
- *
- * This function should submit a change of nameservers request to the
- * domain registrar.
- *
- * @param array $params common module parameters
- *
- * @return array
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- */
-function gandi_SaveNameservers( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld         = $params['sld'];
-	$tld         = $params['tld'];
-	$domain      = $sld . '.' . $tld;
-	$nameservers = [];
-	if ( $params['ns1'] ) {
-		$nameservers[] = $params['ns1'];
-	}
-	if ( $params['ns2'] ) {
-		$nameservers[] = $params['ns2'];
-	}
-	if ( $params['ns3'] ) {
-		$nameservers[] = $params['ns3'];
-	}
-	if ( $params['ns4'] ) {
-		$nameservers[] = $params['ns4'];
-	}
-	if ( $params['ns5'] ) {
-		$nameservers[] = $params['ns5'];
-	}
-	try {
-		$api     = new ApiClient( $params['apiKey'] );
-		$request = $api->updateDomainNameservers( $domain, $nameservers );
-		logModuleCall( 'Gandi Registrar', __FUNCTION__, $nameservers, serialize( $request ) );
-		if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
-			throw new Exception( json_encode( $request ) );
-		}
-		return [
-			'success' => true,
-		];
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
 
-/**
- * Get registrar lock status.
- *
- * Also known as Domain Lock or Transfer Lock status.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return string|array Lock status or error message
- */
-function gandi_GetRegistrarLock( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld    = $params['sld'];
-	$tld    = $params['tld'];
-	$domain = $sld . '.' . $tld;
-	try {
-		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->getDomainInfo( $domain );
-		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-			return [
-				'error' => json_encode( $response )
-			];
-		}
-		if ( is_array( $response->status ) ) {
-			if ( in_array( 'clientTransferProhibited', $response->status ) && $response->can_tld_lock ) {
-				return 'locked';
-			}
-			return 'unlocked';
-		} else {
-			return [
-				'error' => 'No information about lock/unlock status'
-			];
-		}
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
 
-/**
- * Set registrar lock status.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_SaveRegistrarLock( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld        = $params['sld'];
-	$tld        = $params['tld'];
-	$domain     = $sld . '.' . $tld;
-	$lockStatus = $params['lockenabled'];
-	try {
-		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->setLockDomain( $domain, 'locked' === $lockStatus );
-		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
-			return [
-				'error' => json_encode( $response )
-			];
-		}
-		return [
-			'success' => 'success',
-		];
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
-
-/**
- * Get the current WHOIS Contact Information.
- *
- * Should return a multi-level array of the contacts and name/address
- * fields that be modified.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_GetContactDetails( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld    = $params['sld'];
-	$tld    = $params['tld'];
-	$domain = $sld . '.' . $tld;
-	try {
-		$api = new ApiClient( $params['apiKey'] );
-		$contacts = $api->getDomainContacts( $domain );
-		return [
-			'Owner' => gandi_NormalizeContactOutput( (array) $contacts->owner ),
-			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->admin ),
-			'Billing' => gandi_NormalizeContactOutput( (array) $contacts->bill ),
-			'Admin' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
-		];
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
-
-/**
- * Update the WHOIS Contact Information for a given domain.
- *
- * Called when a change of WHOIS Information is requested within WHMCS.
- * Receives an array matching the format provided via the `GetContactDetails`
- * method with the values from the users input.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_SaveContactDetails( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld    = $params['sld'];
-	$tld    = $params['tld'];
-	$domain = $sld . '.' . $tld;
-	try {
-		$api = new ApiClient( $params['apiKey'] );
-		//$response = $api->updateDomainContacts( $domain, $params['contactdetails'] );
-		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
-			return [
-				'error' => json_encode( $response )
-			];
-		}
-		sleep( 5 );
-		return [
-			'success' => 'success',
-		];
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
 
 
 
@@ -816,37 +933,7 @@ function registrarmodule_TransferSync($params)
 
 
 
-/**
- * Resend reachability mail for contact validation
- *
- * @param array $params common module parameters
- *
- * @see ?
- *
- * @return array
- */
-function gandi_ResendIRTPVerificationEmail( $params ) {
-	gandi_LoadTranslations( $params );
-	$sld    = $params['sld'];
-	$tld    = $params['tld'];
-	$domain = $sld . '.' . $tld;
-	try {
-		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->resendReachabilityMail( $domain );
-		if ( ( isset( $response->code ) && 202 < (int) $response->code ) ) {
-			return [
-				'error' => json_encode( $response )
-			];
-		}
-		return [
-			'success' => true
-		];
-	} catch ( \Exception $e ) {
-		return [
-			'error' => $e->getMessage(),
-		];
-	}
-}
+
 
 
 
@@ -1201,36 +1288,7 @@ HTML;
 	return $output.$GLOBALS['CONFIG']['Language'] . '        ' . \Lang::trans('gandi.whoisAnonymization');
 }
 
-/**
- * Request EEP Code.
- *
- * Supports both displaying the EPP Code directly to a user or indicating
- * that the EPP Code will be emailed to the registrant.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- *
- */
-function gandi_GetEPPCode($params) {
-	gandi_LoadTranslations( $params );
-    try {
-        $domain = $params['domainname'];
-        $api = new ApiClient($params["apiKey"]);
-        $request = $api->getDomainInfo($domain);
-        return array(
-                'eppcode' => $request->authinfo,
-            );
-        
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
 
-}
 
 /**
  * Sync Transfer Status & Expiration Date.
@@ -1287,11 +1345,14 @@ add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
 	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'phonenumber', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
 		$contactdetailstranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
 	}
+	$contacttypestranslations = [];
+	foreach ( [ 'owner', 'technical', 'admin', 'billing' ] as $key ) {
+		$contacttypestranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
+	}
 	$entitytranslations = [];
-	$entitytranslations['individual'] = gandi_GetTranslations( 'admin.entity.individual');
-	$entitytranslations['company'] = gandi_GetTranslations( 'admin.entity.company');
-	$entitytranslations['association'] = gandi_GetTranslations( 'admin.entity.association');
-	$entitytranslations['publicbody'] = gandi_GetTranslations( 'admin.entity.publicbody');
+	foreach ( ['individual', 'company', 'association', 'publicbody'] as $key ) {
+		$entitytranslations[ $key ] = gandi_GetTranslations( 'admin.entity.' . $key );
+	}
 	$filename = GANDI_RESOURCE_DIR . 'countries/countrycodes.php';
 	if ( file_exists( $filename ) ) {
 		include $filename;
@@ -1300,6 +1361,7 @@ add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
 	}
 	return [
 		'contactdetailstranslations' => $contactdetailstranslations,
+		'contacttypestranslations' => $contacttypestranslations,
 		'entitytranslations' => $entitytranslations,
 		'countrylist' => $country_list,
 	];

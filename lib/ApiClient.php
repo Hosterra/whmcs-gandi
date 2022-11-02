@@ -273,25 +273,16 @@ class ApiClient {
     */
     public function updateDomainContacts( string $domain, array $contacts ) {
         $url = "{$this->endPoint}/domain/domains/{$domain}/contacts";
-        $owner = (object) $contacts['Owner'];
-		$owner->data_obfuscated = true;
-	    $owner->mail_obfuscated = true;
-	    $owner->type = 0;
         $admin = (object) $contacts['Admin'];
-        $admin->type = 0;
 	    $admin->data_obfuscated = true;
 	    $admin->mail_obfuscated = true;
         $tech = (object) $contacts['Technical'];
-        $tech->type = 0;
 	    $tech->data_obfuscated = true;
 	    $tech->mail_obfuscated = true;
         $billing = (object) $contacts['Billing'];
-        $billing->type = 2;
-	    $billing->orgname = 'bbbbb';
 	    $billing->data_obfuscated = true;
 	    $billing->mail_obfuscated = true;
         $params = [
-            'owner' => $owner,
             'admin' => $admin,
             'bill' => $billing,
             'tech' => $tech
