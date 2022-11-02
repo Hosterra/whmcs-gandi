@@ -613,9 +613,246 @@ function gandi_ResendIRTPVerificationEmail( $params ) {
 	}
 }
 
+/**
+ * Get DNS Records for DNS Host Record Management.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array DNS Host Records
+ */
+function gandi_GetDNS( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$liveDns = new LiveDNS( $params['API Key'] );
+		$records = $liveDns->getLiveDnsRecords( $domain );
+		$hostRecords = [];
+		foreach ($records as $record) {
+			if ( ! in_array( $record->rrset_type, ['A','AAAA','MXE','MX','CNAME','TXT','URL','FRAME'] ) ) {
+				continue; // Only allow supported WHMCS types
+			}
+			if ( 1 < count( $record->rrset_values ) ) {
+				foreach ( $record->rrset_values as $k => $v ) {
+					$entry = [
+						'hostname' => $record->rrset_name, // eg. www
+						'type' => $record->rrset_type, // eg. A
+						'address' => $record->rrset_values[$k], // eg. 10.0.0.1
+					];
+					if ( $record->rrset_type == 'MX' ) {
+						$valueArray = explode( ' ', $record->rrset_values[$k] );
+						$entry['priority'] = $valueArray[0];
+						$entry['address'] = $valueArray[1];
+					}
+					$hostRecords[] = $entry;
+				}
+			} else {
+				$entry = [
+					'hostname' => $record->rrset_name, // eg. www
+					'type' => $record->rrset_type, // eg. A
+					'address' => $record->rrset_values[0], // eg. 10.0.0.1
+				];
+				if ( $record->rrset_type == 'MX' ) {
+					$valueArray = explode( ' ', $record->rrset_values[0] );
+					$entry['priority'] = $valueArray[0];
+					$entry['address'] = $valueArray[1];
+				}
+				$hostRecords[] = $entry;
+			}
+		}
+		return $hostRecords;
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
 
+/**
+ * Update DNS Host Records.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_SaveDNS( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$whmcsRecords = $params['dnsrecords'];
+		$liveDns      = new LiveDNS( $params['apiKey'] );
+		$gandiRecords = $liveDns->getLiveDnsRecords( $domain );
+		foreach ( $whmcsRecords as $index => $whmcsRecord ) {
+			if ( is_array( $gandiRecords )  && isset( $gandiRecords[$index] ) ) {
+				$entryToDelete = $gandiRecords[$index];
+				$liveDns->deleteRecord( $domain, $entryToDelete ); // Clear entry
+			}
+			$response = $liveDns->addRecord( $domain, $whmcsRecord ); // Add entry
+			if ( 404 === $response->code ) {
+				return [
+					'error' => "LiveDNS not enabled",
+				];
+			}
+		}
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
 
+/**
+ * Register a Nameserver.
+ *
+ * Adds a child nameserver for the given domain name.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_RegisterNameserver( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api        = new ApiClient( $params['apiKey'] );
+		$nameserver = explode( '.', $params['nameserver']) ;
+		$request    = $api->registerNameserver( $domain, $nameserver[0], $params['ipaddress'] );
+		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
+			throw new Exception( json_encode( $request ) );
+		}
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
 
+/**
+ * Modify a Nameserver.
+ *
+ * Modifies the IP of a child nameserver.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_ModifyNameserver( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api        = new ApiClient( $params['apiKey'] );
+		$nameserver = explode( '.', $params['nameserver']) ;
+		$request    = $api->updateNameserver( $domain, $nameserver[0], $params['newipaddress'] );
+		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
+			throw new Exception( json_encode( $request ) );
+		}
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Delete a Nameserver.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_DeleteNameserver( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api        = new ApiClient( $params['apiKey'] );
+		$nameserver = explode( '.', $params['nameserver']) ;
+		$request    = $api->deleteNameserver( $domain, $nameserver[0] );
+		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
+			throw new Exception( json_encode( $request ) );
+		}
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
+
+/**
+ * Sync Domain Status & Expiration Date.
+ *
+ * Domain syncing is intended to ensure domain status and expiry date
+ * changes made directly at the domain registrar are synced to WHMCS.
+ * It is called periodically for a domain.
+ *
+ * @param array $params common module parameters
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @return array
+ */
+function gandi_Sync( $params ) {
+	gandi_LoadTranslations( $params );
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	try {
+		$api     = new ApiClient( $params['apiKey'] );
+		$request = $api->getDomainInfo( $domain );
+		$code    = 200;
+		if ( isset( $request->code ) ) {
+			$code = $request->code;
+		}
+		if ( in_array( $code, [403, 404] ) ) {
+			return [
+				'transferredAway' => true
+			];
+		}
+		if ( ! in_array( $code, [401, 403, 404] ) ) {
+			$expired = strtotime( $request->dates->registry_ends_at ) < time() ;
+			return [
+				'expirydate' => date( "Y-m-d", strtotime( $request->dates->registry_ends_at ) ),
+				'active' => true,
+				'expired' => $expired,
+				'transferredAway' => false,
+			];
+		}
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
+}
 
 
 
@@ -985,249 +1222,9 @@ function gandi_CheckAvailability($params)
 }
 
 
-/**
- * Get DNS Records for DNS Host Record Management.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array DNS Host Records
- */
-function gandi_GetDNS($params)
-{
-	gandi_LoadTranslations( $params );
-    try {
-        $apiKey = $params['API Key'];
-        $sld = $params['sld'];
-        $tld = $params['tld'];
-        $domain = $sld . '.' . $tld;
-
-        $gandi = new ApiClient($params["apiKey"]);
-        $liveDns = new LiveDNS($params["apiKey"]);
-        $records = $liveDns->getLiveDnsRecords($domain);
-        $hostRecords = array();
-        foreach ($records as $record) {
-            if (!in_array($record->rrset_type, ['A','AAAA','MXE','MX','CNAME','TXT','URL','FRAME'])) {
-                continue; // Only allow supported WHMCS types
-            }
-            if (count($record->rrset_values) > 1) {
-                foreach ($record->rrset_values as $k => $v) {
-                    $entry = array(
-                         "hostname" => $record->rrset_name, // eg. www
-                         "type" => $record->rrset_type, // eg. A
-                         "address" => $record->rrset_values[$k], // eg. 10.0.0.1
-                     );
-                    if ($record->rrset_type == 'MX') {
-                        $valueArray = explode(' ', $record->rrset_values[$k]);
-                        $entry['priority'] = $valueArray[0];
-                        $entry['address'] = $valueArray[1];
-                    }
-                    $hostRecords[] = $entry;
-                }
-            } else {
-                $entry = array(
-                    "hostname" => $record->rrset_name, // eg. www
-                    "type" => $record->rrset_type, // eg. A
-                    "address" => $record->rrset_values[0], // eg. 10.0.0.1
-                );
-                if ($record->rrset_type == 'MX') {
-                    $valueArray = explode(' ', $record->rrset_values[0]);
-                    $entry['priority'] = $valueArray[0];
-                    $entry['address'] = $valueArray[1];
-                }
-                $hostRecords[] = $entry;
-            }
-        }
-        return $hostRecords;
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
-}
-
-/**
- * Update DNS Host Records.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_SaveDNS($params)
-{
-	gandi_LoadTranslations( $params );
-    try {
-        $apiKey = $params['API Key'];
-        $sld = $params['sld'];
-        $tld = $params['tld'];
-        $domain = $sld . '.' . $tld;
-        $whmcsRecords = $params['dnsrecords'];
-        $gandi = new ApiClient($params["apiKey"]);
-        $liveDns = new LiveDNS($params["apiKey"]);
-        $gandiRecords = $liveDns->getLiveDnsRecords($domain);
-        foreach ($whmcsRecords as $index => $whmcsRecord) {
-            if (is_array($gandiRecords)  && isset($gandiRecords[$index])) {
-                $entryToDelete = $gandiRecords[$index];
-                $liveDns->deleteRecord($domain, $entryToDelete); // Clear entry
-            }
-            $response = $liveDns->addRecord($domain, $whmcsRecord); // Add entry
-            if ($response->code == 404) {
-                return array(
-                    'error' => "LiveDNS not enabled",
-                );
-            }
-        }
-        return array(
-            'success' => 'success',
-        );
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
-}
 
 
-/**
- * Register a Nameserver.
- *
- * Adds a child nameserver for the given domain name.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_RegisterNameserver($params)
-{
-	gandi_LoadTranslations( $params );
-    try {
-        $apiKey = $params['API Key'];
-        $sld = $params['sld'];
-        $tld = $params['tld'];
-        $domain = $sld . '.' . $tld;
-        $api = new ApiClient($params["apiKey"]);
-        $nameserver = explode('.', $params['nameserver']);
-        $request = $api->registerNameserver($domain, $nameserver[0], $params['ipaddress']);
-        if ((isset($request->code) && $request->code != 202)|| isset($request->errors)) {
-            throw new Exception(json_encode($request));
-        }
 
-        return array(
-            'success' => 'success',
-        );
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
-}
-
-/**
- * Modify a Nameserver.
- *
- * Modifies the IP of a child nameserver.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_ModifyNameserver($params)
-{
-	gandi_LoadTranslations( $params );
-    $apiKey = $params['API Key'];
-    $sld = $params['sld'];
-    $tld = $params['tld'];
-    $domain = $sld . '.' . $tld;
-    $api = new ApiClient($params["apiKey"]);
-    $nameserver = explode('.', $params['nameserver']);
-    $request = $api->updateNameserver($domain, $nameserver[0], $params['newipaddress']);
-    if ((isset($request->code) && $request->code != 202)|| isset($request->errors)) {
-        throw new Exception(json_encode($request));
-    }
-    return array(
-        'success' => 'success',
-    );
-}
-
-/**
- * Delete a Nameserver.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_DeleteNameserver($params)
-{
-	gandi_LoadTranslations( $params );
-    $apiKey = $params['API Key'];
-    $sld = $params['sld'];
-    $tld = $params['tld'];
-    $domain = $sld . '.' . $tld;
-    $api = new ApiClient($params["apiKey"]);
-    $nameserver = explode('.', $params['nameserver']);
-    $request = $api->deleteNameserver($domain, $nameserver[0]);
-    if ((isset($request->code) && $request->code != 202)|| isset($request->errors)) {
-        throw new Exception(json_encode($request));
-    }
-
-    return array(
-        'success' => 'success',
-    );
-}
-
-/**
- * Sync Domain Status & Expiration Date.
- *
- * Domain syncing is intended to ensure domain status and expiry date
- * changes made directly at the domain registrar are synced to WHMCS.
- * It is called periodically for a domain.
- *
- * @param array $params common module parameters
- *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @return array
- */
-function gandi_Sync($params)
-{
-	gandi_LoadTranslations( $params );
-    try {
-        $domain = $params['domain'];
-        $api = new ApiClient($params["apiKey"]);
-        $request = $api->getDomainInfo($domain);
-        $code = 200; // default code because not set by API when everything is fine
-        if (isset($request->code)) {
-            $code = $request->code;
-        }
-        if (in_array($code, [403, 404])) { // Transfered away
-            return array(
-                'transferredAway' => true
-            );
-        }
-        if (!in_array($code, [401, 403, 404])) {
-            $expired = (strtotime($request->dates->registry_ends_at) < time())?true:false;
-            return array(
-                'expirydate' => date("Y-m-d", strtotime($request->dates->registry_ends_at)),
-                'active' => true, // Return true if the domain is active
-                'expired' => $expired,
-                'transferredAway' => false
-            );
-        }
-    } catch ( \Exception $e ) {
-        return array(
-            'error' => $e->getMessage(),
-        );
-    }
-}
 
 
 /**
