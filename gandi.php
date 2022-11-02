@@ -272,6 +272,47 @@ function gandi_getConfigArray( $params ) {
 }
 
 /**
+ * Check Domain Availability.
+ *
+ * Determine if a domain or group of domains are available for
+ * registration or transfer.
+ *
+ * @param array $params common module parameters
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
+ *
+ * @see \WHMCS\Domains\DomainLookup\SearchResult
+ * @see \WHMCS\Domains\DomainLookup\ResultsList
+ *
+ * @throws Exception Upon domain availability check failure.
+ *
+ * @return \WHMCS\Domains\DomainLookup\ResultsList An ArrayObject based collection of \WHMCS\Domains\DomainLookup\SearchResult results
+ */
+function gandi_CheckAvailability( $params ) {
+	gandi_LoadTranslations( $params );
+	try {
+		$results = new LookupResultsList();
+		$sld = $params['sld'];
+		$api = new ApiClient( $params['apiKey'] );
+		foreach ( $params['tlds'] as $tld ) {
+			$tld = str_replace('.', '', $tld);
+			$searchResult = new SearchResult( $sld, $tld );
+			$domain = $sld . '.' . $tld;
+			$availability = $api->getDomainAvailability( $domain );
+			if ( 'available' === $availability ) {
+				$status = SearchResult::STATUS_NOT_REGISTERED;
+			} else {
+				$status = SearchResult::STATUS_REGISTERED;
+			}
+			$searchResult->setStatus( $status );
+			$results->append( $searchResult );
+		}
+		return $results;
+	} catch ( \Exception $e ) {
+		return new LookupResultsList();
+	}
+}
+
+/**
  * Get current tld pricing
  *
  * @return WHMCS\Results\ResultsList
@@ -1128,48 +1169,7 @@ function gandi_RenewDomain( $params ) {
 
 
 
-/**
- * Check Domain Availability.
- *
- * Determine if a domain or group of domains are available for
- * registration or transfer.
- *
- * @param array $params common module parameters
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
- * @see \WHMCS\Domains\DomainLookup\SearchResult
- * @see \WHMCS\Domains\DomainLookup\ResultsList
- *
- * @throws Exception Upon domain availability check failure.
- *
- * @return \WHMCS\Domains\DomainLookup\ResultsList An ArrayObject based collection of \WHMCS\Domains\DomainLookup\SearchResult results
- */
-function gandi_CheckAvailability( $params ) {
-	gandi_LoadTranslations( $params );
-    try {
-        $results = new LookupResultsList();
-        $sld = $params['sld'];
-        $api = new ApiClient( $params['apiKey'] );
-        foreach ( $params['tlds'] as $tld ) {
-            $tld = str_replace('.', '', $tld);
-            $searchResult = new SearchResult( $sld, $tld );
-            $domain = $sld . '.' . $tld;
-            $availability = $api->getDomainAvailability( $domain );
-            if ( 'available' === $availability ) {
-                $status = SearchResult::STATUS_NOT_REGISTERED;
-            } else {
-                $status = SearchResult::STATUS_REGISTERED;
-            }
-            $searchResult->setStatus( $status );
-            $results->append( $searchResult );
-        }
-        return $results;
-    } catch ( \Exception $e ) {
-        return [
-            'error' => $e->getMessage(),
-        ];
-    }
-}
+
 
 
 
