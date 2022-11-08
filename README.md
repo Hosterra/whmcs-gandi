@@ -31,6 +31,10 @@ Use Gandi.net as registrar in WHMCS.
 
 ## How to configure
 
+## Uncovered TLDs
+All [TLDs managed by Gandi](https://www.gandi.net/en/domain/tld) are registrable except the following:
+- TLDs reserved for Gandi Corporate Services (see [list](resources/domains/corporateservices.php));
+- TLDs that require heavy development work to be integrated into the WHMCS workflow (see [list](resources/domains/excluded.php)).
 
 ## Contributing
 
