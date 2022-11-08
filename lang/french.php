@@ -31,6 +31,6 @@ define( 'GANDI_LANG', [
 	'admin.contact.admin' => "Administratif",
 	'admin.entity.individual' => "Particulier",
 	'admin.entity.company' => "Entreprise",
-	'admin.entity.association' => "Association",
+	'admin.entity.association' => "Association / ONG",
 	'admin.entity.publicbody' => "Organisme public",
 ] );

@@ -30,7 +30,7 @@ define( 'GANDI_LANG', [
 	'admin.contact.admin' => "Admin",
 	'admin.entity.individual' => "Individual",
 	'admin.entity.company' => "Company",
-	'admin.entity.association' => "Association",
+	'admin.entity.association' => "Association / NGO",
 	'admin.entity.publicbody' => "Public body",
 
 ] );
