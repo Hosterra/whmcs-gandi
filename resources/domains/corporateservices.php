@@ -1,0 +1,2 @@
+<?php
+$corporate_tlds = [];
