@@ -26,7 +26,7 @@ Use Gandi.net as registrar in WHMCS.
 1. In your WHCMS installation, in the `modules/registrars/`, create a `gandi` directory.
 2. Download the last [release](https://github.com/Hosterra/whmcs-gandi/releases).
 3. Unzip & copy all files in the `gandi` directory.
-4. Copy the file named `additionalfields.php` from `modules/registrars/gandi/resources/domains/` to `resources/domains/` - OR, better, make a symbolic link if your operating system allows it.
+4. Make a symbolic link named `resources/domains/additionalfields.php` to `modules/registrars/gandi/resources/domains/additionalfields.php`.
 5. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
 
 ## How to configure
