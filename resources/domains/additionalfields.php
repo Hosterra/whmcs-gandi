@@ -15,6 +15,7 @@ if ( file_exists( $filename ) ) {
 	include $filename;
 } else {
 	$country_list = [];
+	$eu_countries = [];
 }
 
 $filename = $path . 'domains/tlds.php';
@@ -37,11 +38,10 @@ $ca_bt = [];
 foreach ( [ 'corporation', 'trust', 'government', 'education', 'unincorporated-association', 'hospital', 'trade-union', 'political-party', 'library-archive-museum', 'other' ] as $type ) {
 	$ca_bt[] = $type . '|' . Lang::trans( 'gandi.CA.' . $type );
 }
-$eu_countries = [ 'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'AX', 'GF', 'GP', 'MQ', ];
 $eu_ct = [];
-foreach ( $eu_countries as $country ) {
-	if ( array_key_exists( $country, $country_list ) ) {
-		$eu_ct[] = $country . '|' . $country_list[$country]['name'];
+foreach ( $country_list as $code => $name ) {
+	if ( in_array( $code, $eu_countries ) ) {
+		$eu_ct[] = $code . '|' . $name;
 	}
 }
 $uk_bt = [];
