@@ -318,6 +318,12 @@ function gandi_CheckAvailability( $params ) {
  * @return WHMCS\Results\ResultsList
  */
 function gandi_GetTldPricing( $params ) {
+	$filename = GANDI_RESOURCE_DIR . 'domains/tlds.php';
+	if ( file_exists( $filename ) ) {
+		include $filename;
+	} else {
+		$enabled_tlds = [];
+	}
 	$currency    = 'USD';
 	$results     = new ResultsList;
 	$creation    = gandi_GetTLDs( $params, 'create' );
@@ -329,6 +335,9 @@ function gandi_GetTldPricing( $params ) {
 	}
 	if ( array_key_exists( 'tlds', $creation ) && is_array( $creation['tlds'] ) ) {
 		foreach ( $creation['tlds'] as $tld => $price ) {
+			if ( ! in_array( $tld, $enabled_tlds ) ) {
+				continue;
+			}
 			if ( array_key_exists( 'create', $price ) && array_key_exists( 'minY', $price ) && array_key_exists( 'maxY', $price ) ) {
 				$item = new ImportItem;
 				$item->setExtension( $tld );
