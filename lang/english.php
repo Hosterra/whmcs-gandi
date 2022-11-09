@@ -12,6 +12,7 @@ define( 'GANDI_LANG', [
 	'admin.sponsor' => "Sponsored by Hosterra - https://hosterra.eu",
 	'admin.apikey' => "API key",
 	'admin.organization' => "Organization",
+	'admin.termsplaceholder' => "Full url of your terms & conditions",
 	'admin.dns' => "DNS to use",
 	'admin.dns.livedns' => "Gandi LiveDNS",
 	'admin.dns.whmcs' => "Other",
@@ -32,5 +33,6 @@ define( 'GANDI_LANG', [
 	'admin.entity.company' => "Company",
 	'admin.entity.association' => "Association / NGO",
 	'admin.entity.publicbody' => "Public body",
+
 
 ] );

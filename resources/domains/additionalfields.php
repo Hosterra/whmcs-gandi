@@ -64,6 +64,27 @@ $legaltype = [
 	'Default' => 'unknown',
 	'Required' => true,
 ];
+$privacy = [
+	'Name'    => 'x-gandi-privacy',
+	"LangVar" => "x-gandi-privacy",
+	'Type'    => 'tickbox',
+	'Description' => Lang::trans( 'x-gandi-privacy-description' ),
+	'Required' => true,
+];
+$acks = [
+	'Name'    => 'x-gandi-acks',
+	"LangVar" => "x-gandi-acks",
+	'Type'    => 'tickbox',
+	'Description' => Lang::trans( 'x-gandi-acks-description' ),
+	'Required' => true,
+];
+$terms = [
+	'Name'    => 'x-gandi-terms',
+	"LangVar" => "x-gandi-terms",
+	'Type'    => 'tickbox',
+	'Description' => Lang::trans( 'x-gandi-terms-description' ),
+	'Required' => true,
+];
 
 /////////////////////////////////
 // .*
@@ -638,3 +659,11 @@ $additionaldomainfields['.vote'] = array('Name' => 'Agreement', "Remove" => true
 /////////////////////////////////
 // .VOTO
 $additionaldomainfields['.voto'] = array('Name' => 'Agreement', "Remove" => true);
+
+/////////////////////////////////
+// .*
+foreach ( $enabled_tlds as $tld ) {
+	$additionaldomainfields[$tld][] = $acks;
+	$additionaldomainfields[$tld][] = $terms;
+	$additionaldomainfields[$tld][] = $privacy;
+}
