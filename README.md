@@ -2,7 +2,7 @@
 
 Use Gandi.net as registrar in WHMCS.
 
-![PHP 8.x Compatibility](https://img.shields.io/badge/PHP-7.x-7c86b4?style=flat-square) ![WHCMS 8.5.x Compatibility](https://img.shields.io/badge/WHMCS-8.5.x-96be4f?style=flat-square)
+![PHP 8.x Compatibility](https://img.shields.io/badge/PHP-8.x-7c86b4?style=flat-square) ![WHCMS 8.5.x Compatibility](https://img.shields.io/badge/WHMCS-8.5.x-96be4f?style=flat-square)
 
 ## Features
 - TLD prices import: **_supported_**
