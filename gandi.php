@@ -1,17 +1,16 @@
 <?php
 
-if (!defined("WHMCS")) {
-    die("This file cannot be accessed directly");
+if ( ! defined( "WHMCS" ) ) {
+	die( "This file cannot be accessed directly" );
 }
 
 define( 'GANDI_REGISTRAR_PRODUCT_NAME', 'Gandi Registrar' );
 define( 'GANDI_REGISTRAR_PRODUCT_URL', 'https://github.com/Hosterra/whmcs-gandi' );
 define( 'GANDI_REGISTRAR_API_VERSION', '5' );
 define( 'GANDI_REGISTRAR_VERSION', '5.0.0' );
-define( 'GANDI_LANG_DIR', dirname(__FILE__) . '/lang/' );
-define( 'GANDI_RESOURCE_DIR', dirname(__FILE__) . '/resources/' );
-define( 'GANDI_CONTACT_TYPES', [ 'individual', 'company', 'association', 'publicbody', 'reseller'] );
-
+define( 'GANDI_LANG_DIR', dirname( __FILE__ ) . '/lang/' );
+define( 'GANDI_RESOURCE_DIR', dirname( __FILE__ ) . '/resources/' );
+define( 'GANDI_CONTACT_TYPES', [ 'individual', 'company', 'association', 'publicbody', 'reseller' ] );
 
 
 use WHMCS\Carbon;
@@ -24,7 +23,7 @@ use WHMCS\Module\Registrar\Gandi\ApiClient;
 use WHMCS\Module\Registrar\Gandi\LiveDNS;
 use WHMCS\Module\Registrar\Gandi\ERRPolicy;
 
-require_once dirname(__FILE__) . '/lib/LiveDNS.php';
+require_once dirname( __FILE__ ) . '/lib/LiveDNS.php';
 
 /**
  * Define module related metadata
@@ -35,10 +34,10 @@ require_once dirname(__FILE__) . '/lib/LiveDNS.php';
  * @return array
  */
 function gandi_MetaData() {
-    return [
-	    'DisplayName' => GANDI_REGISTRAR_PRODUCT_NAME . ' v' . GANDI_REGISTRAR_VERSION,
-	    'APIVersion' => '1.1',
-    ];
+	return [
+		'DisplayName' => GANDI_REGISTRAR_PRODUCT_NAME . ' v' . GANDI_REGISTRAR_VERSION,
+		'APIVersion'  => '1.1',
+	];
 }
 
 /**
@@ -49,7 +48,7 @@ function gandi_LoadTranslations( $reference ) {
 		$lang = 'none';
 		if ( array_key_exists( 'language', $reference ) ) {
 			$lang = strtolower( $reference['language'] );
-		} elseif ( array_key_exists( 'activeLocale', $reference ) && is_array( $reference['activeLocale'] ) && array_key_exists( 'language', $reference['activeLocale'] )  ) {
+		} elseif ( array_key_exists( 'activeLocale', $reference ) && is_array( $reference['activeLocale'] ) && array_key_exists( 'language', $reference['activeLocale'] ) ) {
 			$lang = strtolower( $reference['activeLocale']['language'] );
 		} else {
 			global $aInt;
@@ -71,8 +70,9 @@ function gandi_LoadTranslations( $reference ) {
  */
 function gandi_GetTranslations( $key ) {
 	if ( defined( 'GANDI_LANG' ) && is_array( GANDI_LANG ) && array_key_exists( $key, GANDI_LANG ) ) {
-		return GANDI_LANG[$key];
+		return GANDI_LANG[ $key ];
 	}
+
 	return $key;
 }
 
@@ -93,14 +93,14 @@ function gandi_GetTLDs( $params, $action ) {
 		$result['tlds']             = [];
 		foreach ( $response->products as $product ) {
 			if ( 'available' === (string) $product->status ) {
-				$p = 0.0;
+				$p    = 0.0;
 				$minY = 10;
 				$maxY = 1;
 				foreach ( $product->prices as $price ) {
 					switch ( $action ) {
 						case 'create':
 							if ( 'golive' === (string) $price->options->phase && ! $price->discount ) {
-								$p = max( $p, (float) $price->price_before_taxes );
+								$p    = max( $p, (float) $price->price_before_taxes );
 								$minY = min( $minY, $price->min_duration );
 								$maxY = max( $maxY, $price->max_duration );
 							}
@@ -115,14 +115,15 @@ function gandi_GetTLDs( $params, $action ) {
 					}
 				}
 				if ( 0.0 < $p ) {
-					$result['tlds'][ $product->name ][$action] = $p;
+					$result['tlds'][ $product->name ][ $action ] = $p;
 					if ( 'create' === $action ) {
-						$result['tlds'][ $product->name ]['minY']  = $minY;
-						$result['tlds'][ $product->name ]['maxY']  = $maxY;
+						$result['tlds'][ $product->name ]['minY'] = $minY;
+						$result['tlds'][ $product->name ]['maxY'] = $maxY;
 					}
 				}
 			}
 		}
+
 		return $result;
 	} catch ( \Exception $e ) {
 		return [];
@@ -148,7 +149,7 @@ function gandi_NormalizeContactOutput( $contact ) {
 		unset( $contact['same_as_owner'] );
 	}
 	if ( array_key_exists( 'phone', $contact ) ) {
-		$contact['Phone'] = '+' . preg_replace("/[^0-9]/", "", $contact['phone'] );
+		$contact['Phone'] = '+' . preg_replace( "/[^0-9]/", "", $contact['phone'] );
 	}
 	if ( ! array_key_exists( 'orgname', $contact ) ) {
 		$contact['orgname'] = '';
@@ -164,9 +165,23 @@ function gandi_NormalizeContactOutput( $contact ) {
 		$contact['type'] = GANDI_CONTACT_TYPES[0];
 	}
 	$sortedContact = [];
-	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'Phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+	foreach (
+		[
+			'type',
+			'orgname',
+			'given',
+			'family',
+			'email',
+			'Phone',
+			'streetaddr',
+			'city',
+			'zip',
+			'country'
+		] as $key
+	) {
 		$sortedContact[ $key ] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
 	}
+
 	return $sortedContact;
 }
 
@@ -177,12 +192,26 @@ function gandi_NormalizeContactOutput( $contact ) {
  */
 function gandi_NormalizeContactInput( $contact ) {
 	$items = [];
-	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'Phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+	foreach (
+		[
+			'type',
+			'orgname',
+			'given',
+			'family',
+			'email',
+			'Phone',
+			'streetaddr',
+			'city',
+			'zip',
+			'country'
+		] as $key
+	) {
 		$items[ strtolower( $key ) ] = array_key_exists( $key, $contact ) ? $contact[ $key ] : '';
 	}
 	if ( array_key_exists( 'orgname', $items ) && '' === $items['orgname'] ) {
 		$items['type'] = 'individual';
 	}
+
 	return $items;
 }
 
@@ -212,63 +241,65 @@ function gandi_getConfigArray( $params ) {
 			$organizationList = [];
 			$organizations    = $api->getOrganizations();
 			if ( is_array( $organizations ) ) {
-				foreach( $organizations as $organization ){
-					$organizationsList[$organization->id] = $organization->name;
+				foreach ( $organizations as $organization ) {
+					$organizationsList[ $organization->id ] = $organization->name;
 				}
 			}
 		} catch ( Exception $e ) {
 			// How/where to log?
 		}
+
 		return [
 			'FriendlyName' => [
-				'Type' => 'System',
+				'Type'  => 'System',
 				'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
 			],
-			'apiKey' => [
+			'apiKey'       => [
 				'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
-				'Type' => 'password',
-				'Size' => '100',
+				'Type'         => 'password',
+				'Size'         => '100',
 			],
 			'organization' => [
 				'FriendlyName' => gandi_GetTranslations( 'admin.organization' ),
-				'Type' => 'dropdown',
-				'Options' => $organizationsList,
+				'Type'         => 'dropdown',
+				'Options'      => $organizationsList,
 			],
-			'dns' => [
+			'dns'          => [
 				'FriendlyName' => gandi_GetTranslations( 'admin.dns' ),
-				'Type' => 'dropdown',
-				'Options' => [
+				'Type'         => 'dropdown',
+				'Options'      => [
 					'livedns' => gandi_GetTranslations( 'admin.dns.livedns' ),
-					'whmcs' => gandi_GetTranslations( 'admin.dns.whmcs' ),
+					'whmcs'   => gandi_GetTranslations( 'admin.dns.whmcs' ),
 				],
 			],
-			'version' => [
+			'version'      => [
 				'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
-				'Type' => 'text',
-				'Size' => '100',
-				'Disabled' => true,
-				'Placeholder' => gandi_GetTranslations( 'admin.sponsor' ),
+				'Type'         => 'text',
+				'Size'         => '100',
+				'Disabled'     => true,
+				'Placeholder'  => gandi_GetTranslations( 'admin.sponsor' ),
 			],
 		];
 	}
+
 	return [
 		'FriendlyName' => [
-			'Type' => 'System',
+			'Type'  => 'System',
 			'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
 		],
-		'apiKey' => [
+		'apiKey'       => [
 			'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
-			'Type' => 'password',
-			'Size' => '100',
+			'Type'         => 'password',
+			'Size'         => '100',
 		],
-		'version' => [
+		'version'      => [
 			'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
-			'Type' => 'text',
-			'Size' => '100',
-			'Disabled' => true,
-			'Placeholder' => gandi_GetTranslations( 'admin.sponsor' ),
+			'Type'         => 'text',
+			'Size'         => '100',
+			'Disabled'     => true,
+			'Placeholder'  => gandi_GetTranslations( 'admin.sponsor' ),
 		],
-    ];
+	];
 }
 
 /**
@@ -278,25 +309,26 @@ function gandi_getConfigArray( $params ) {
  * registration or transfer.
  *
  * @param array $params common module parameters
+ *
+ * @return \WHMCS\Domains\DomainLookup\ResultsList An ArrayObject based collection of \WHMCS\Domains\DomainLookup\SearchResult results
+ * @throws Exception Upon domain availability check failure.
+ *
+ * @see \WHMCS\Domains\DomainLookup\ResultsList
+ *
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
  * @see \WHMCS\Domains\DomainLookup\SearchResult
- * @see \WHMCS\Domains\DomainLookup\ResultsList
- *
- * @throws Exception Upon domain availability check failure.
- *
- * @return \WHMCS\Domains\DomainLookup\ResultsList An ArrayObject based collection of \WHMCS\Domains\DomainLookup\SearchResult results
  */
 function gandi_CheckAvailability( $params ) {
 	gandi_LoadTranslations( $params );
 	try {
 		$results = new LookupResultsList();
-		$sld = $params['sld'];
-		$api = new ApiClient( $params['apiKey'] );
+		$sld     = $params['sld'];
+		$api     = new ApiClient( $params['apiKey'] );
 		foreach ( $params['tlds'] as $tld ) {
-			$tld = str_replace('.', '', $tld);
+			$tld          = str_replace( '.', '', $tld );
 			$searchResult = new SearchResult( $sld, $tld );
-			$domain = $sld . '.' . $tld;
+			$domain       = $sld . '.' . $tld;
 			$availability = $api->getDomainAvailability( $domain );
 			if ( 'available' === $availability ) {
 				$status = SearchResult::STATUS_NOT_REGISTERED;
@@ -306,6 +338,7 @@ function gandi_CheckAvailability( $params ) {
 			$searchResult->setStatus( $status );
 			$results->append( $searchResult );
 		}
+
 		return $results;
 	} catch ( \Exception $e ) {
 		return new LookupResultsList();
@@ -346,22 +379,23 @@ function gandi_GetTldPricing( $params ) {
 				$item->setMinYears( $price['minY'] );
 				$item->setMaxYears( $price['maxY'] );
 				$item->setRegisterPrice( $price['create'] );
-				if ( array_key_exists( 'tlds', $renewal ) && is_array( $renewal['tlds'] ) && array_key_exists( $tld, $renewal['tlds'] ) && is_array( $renewal['tlds'][$tld] ) && array_key_exists( 'renew', $renewal['tlds'][$tld] ) ) {
-					$item->setRenewPrice( $renewal['tlds'][$tld]['renew'] );
-					$item->setGraceFeePrice( $renewal['tlds'][$tld]['renew'] );
+				if ( array_key_exists( 'tlds', $renewal ) && is_array( $renewal['tlds'] ) && array_key_exists( $tld, $renewal['tlds'] ) && is_array( $renewal['tlds'][ $tld ] ) && array_key_exists( 'renew', $renewal['tlds'][ $tld ] ) ) {
+					$item->setRenewPrice( $renewal['tlds'][ $tld ]['renew'] );
+					$item->setGraceFeePrice( $renewal['tlds'][ $tld ]['renew'] );
 					$item->setGraceFeeDays( ERRPolicy::getGrace( $tld ) );
 				}
-				if ( array_key_exists( 'tlds', $transfer ) && is_array( $transfer['tlds'] ) && array_key_exists( $tld, $transfer['tlds'] ) && is_array( $transfer['tlds'][$tld] ) && array_key_exists( 'transfer', $transfer['tlds'][$tld] ) ) {
-					$item->setTransferPrice( $transfer['tlds'][$tld]['transfer'] );
+				if ( array_key_exists( 'tlds', $transfer ) && is_array( $transfer['tlds'] ) && array_key_exists( $tld, $transfer['tlds'] ) && is_array( $transfer['tlds'][ $tld ] ) && array_key_exists( 'transfer', $transfer['tlds'][ $tld ] ) ) {
+					$item->setTransferPrice( $transfer['tlds'][ $tld ]['transfer'] );
 				}
-				if ( array_key_exists( 'tlds', $restoration ) && is_array( $restoration['tlds'] ) && array_key_exists( $tld, $restoration['tlds'] ) && is_array( $restoration['tlds'][$tld] ) && array_key_exists( 'restore', $restoration['tlds'][$tld] ) ) {
-					$item->setRedemptionFeePrice( $restoration['tlds'][$tld]['restore'] );
+				if ( array_key_exists( 'tlds', $restoration ) && is_array( $restoration['tlds'] ) && array_key_exists( $tld, $restoration['tlds'] ) && is_array( $restoration['tlds'][ $tld ] ) && array_key_exists( 'restore', $restoration['tlds'][ $tld ] ) ) {
+					$item->setRedemptionFeePrice( $restoration['tlds'][ $tld ]['restore'] );
 					$item->setRedemptionFeeDays( ERRPolicy::getRedemption( $tld ) );
 				}
 				$results[] = $item;
 			}
 		}
 	}
+
 	return $results;
 }
 
@@ -373,9 +407,9 @@ function gandi_GetTldPricing( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_GetContactDetails( $params ) {
 	gandi_LoadTranslations( $params );
@@ -383,13 +417,14 @@ function gandi_GetContactDetails( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api = new ApiClient( $params['apiKey'] );
+		$api      = new ApiClient( $params['apiKey'] );
 		$contacts = $api->getDomainContacts( $domain );
+
 		return [
-			'Owner' => gandi_NormalizeContactOutput( (array) $contacts->owner ),
+			'Owner'     => gandi_NormalizeContactOutput( (array) $contacts->owner ),
 			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
-			'Billing' => gandi_NormalizeContactOutput( (array) $contacts->bill ),
-			'Admin' => gandi_NormalizeContactOutput( (array) $contacts->admin ),
+			'Billing'   => gandi_NormalizeContactOutput( (array) $contacts->bill ),
+			'Admin'     => gandi_NormalizeContactOutput( (array) $contacts->admin ),
 		];
 	} catch ( \Exception $e ) {
 		return [
@@ -407,9 +442,9 @@ function gandi_GetContactDetails( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_SaveContactDetails( $params ) {
 	gandi_LoadTranslations( $params );
@@ -418,17 +453,18 @@ function gandi_SaveContactDetails( $params ) {
 	$domain = $sld . '.' . $tld;
 	try {
 		$contacts = [];
-		foreach ( ['Owner', 'Technical', 'Billing', 'Admin'] as $contact ) {
+		foreach ( [ 'Owner', 'Technical', 'Billing', 'Admin' ] as $contact ) {
 			$contacts[ $contact ] = gandi_NormalizeContactInput( $params['contactdetails'][ $contact ] );
 		}
-		$api = new ApiClient( $params['apiKey'] );
+		$api      = new ApiClient( $params['apiKey'] );
 		$response = $api->updateDomainContacts( $domain, $contacts );
-		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
 			];
 		}
 		sleep( 5 );
+
 		return [
 			'success' => 'success',
 		];
@@ -464,15 +500,13 @@ function gandi_GetNameservers( $params ) {
 			];
 		}
 		$response = [];
-		foreach ( $request as $k => $v ) {
-			if ( 'livedns' === $params['dns'] ) {
-					if ( str_starts_with( $v, 'ns-' ) && str_ends_with( $v, '.gandi.net' ) ) {
-						continue;
-					}
+		if ( 'livedns' !== $params['dns'] || ! LiveDNS::isCorrect( $request ) ) {
+			foreach ( $request as $k => $v ) {
+				$index                     = $k + 1;
+				$response[ 'ns' . $index ] = $v;
 			}
-			$index                     = $k + 1;
-			$response[ 'ns' . $index ] = $v;
 		}
+
 		return $response;
 	} catch ( \Exception $e ) {
 		return [
@@ -515,11 +549,17 @@ function gandi_SaveNameservers( $params ) {
 		$nameservers[] = $params['ns5'];
 	}
 	try {
-		$api     = new ApiClient( $params['apiKey'] );
-		$request = $api->updateDomainNameservers( $domain, $nameservers );
+		$api = new ApiClient( $params['apiKey'] );
+		if ( 'livedns' === $params['dns'] && LiveDNS::isCorrect( $nameservers ) ) {
+			$request = $api->enableLiveDNS( $domain );
+		} else {
+			$request = $api->updateDomainNameservers( $domain, $nameservers );
+		}
+		$api->invalidateCache( $domain . '/nameservers' );
 		if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
 			throw new Exception( json_encode( $request ) );
 		}
+
 		return [
 			'success' => true,
 		];
@@ -537,9 +577,9 @@ function gandi_SaveNameservers( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return string|array Lock status or error message
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return string|array Lock status or error message
  */
 function gandi_GetRegistrarLock( $params ) {
 	gandi_LoadTranslations( $params );
@@ -558,6 +598,7 @@ function gandi_GetRegistrarLock( $params ) {
 			if ( in_array( 'clientTransferProhibited', $response->status ) && $response->can_tld_lock ) {
 				return 'locked';
 			}
+
 			return 'unlocked';
 		} else {
 			return [
@@ -576,9 +617,9 @@ function gandi_GetRegistrarLock( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_SaveRegistrarLock( $params ) {
 	gandi_LoadTranslations( $params );
@@ -589,11 +630,12 @@ function gandi_SaveRegistrarLock( $params ) {
 	try {
 		$api      = new ApiClient( $params['apiKey'] );
 		$response = $api->setLockDomain( $domain, 'locked' === $lockStatus );
-		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors )  ) {
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
 			];
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -612,16 +654,17 @@ function gandi_SaveRegistrarLock( $params ) {
  *
  * @param array $params common module parameters
  *
- * @see https://developers.whmcs.com/domain-registrars/module-parameters/
- *
  * @return array
+ *
+ * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
  */
 function gandi_GetEPPCode( $params ) {
 	gandi_LoadTranslations( $params );
 	try {
-		$api = new ApiClient( $params['apiKey'] );
+		$api     = new ApiClient( $params['apiKey'] );
 		$request = $api->getDomainInfo( $params['domainname'] );
+
 		return [
 			'eppcode' => $request->authinfo,
 		];
@@ -638,9 +681,9 @@ function gandi_GetEPPCode( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see ?
  *
- * @return array
  */
 function gandi_ResendIRTPVerificationEmail( $params ) {
 	gandi_LoadTranslations( $params );
@@ -655,6 +698,7 @@ function gandi_ResendIRTPVerificationEmail( $params ) {
 				'error' => json_encode( $response )
 			];
 		}
+
 		return [
 			'success' => true
 		];
@@ -670,9 +714,9 @@ function gandi_ResendIRTPVerificationEmail( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array DNS Host Records
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array DNS Host Records
  */
 function gandi_GetDNS( $params ) {
 	gandi_LoadTranslations( $params );
@@ -680,41 +724,42 @@ function gandi_GetDNS( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$liveDns = new LiveDNS( $params['apiKey'] );
-		$records = $liveDns->getLiveDnsRecords( $domain );
+		$liveDns     = new LiveDNS( $params['apiKey'] );
+		$records     = $liveDns->getLiveDnsRecords( $domain );
 		$hostRecords = [];
-		foreach ($records as $record) {
-			if ( ! in_array( $record->rrset_type, ['A','AAAA','MXE','MX','CNAME','TXT','URL','FRAME'] ) ) {
+		foreach ( $records as $record ) {
+			if ( ! in_array( $record->rrset_type, [ 'A', 'AAAA', 'MXE', 'MX', 'CNAME', 'TXT', 'URL', 'FRAME' ] ) ) {
 				continue; // Only allow supported WHMCS types
 			}
 			if ( 1 < count( $record->rrset_values ) ) {
 				foreach ( $record->rrset_values as $k => $v ) {
 					$entry = [
 						'hostname' => $record->rrset_name, // eg. www
-						'type' => $record->rrset_type, // eg. A
-						'address' => $record->rrset_values[$k], // eg. 10.0.0.1
+						'type'     => $record->rrset_type, // eg. A
+						'address'  => $record->rrset_values[ $k ], // eg. 10.0.0.1
 					];
 					if ( $record->rrset_type == 'MX' ) {
-						$valueArray = explode( ' ', $record->rrset_values[$k] );
+						$valueArray        = explode( ' ', $record->rrset_values[ $k ] );
 						$entry['priority'] = $valueArray[0];
-						$entry['address'] = $valueArray[1];
+						$entry['address']  = $valueArray[1];
 					}
 					$hostRecords[] = $entry;
 				}
 			} else {
 				$entry = [
 					'hostname' => $record->rrset_name, // eg. www
-					'type' => $record->rrset_type, // eg. A
-					'address' => $record->rrset_values[0], // eg. 10.0.0.1
+					'type'     => $record->rrset_type, // eg. A
+					'address'  => $record->rrset_values[0], // eg. 10.0.0.1
 				];
 				if ( $record->rrset_type == 'MX' ) {
-					$valueArray = explode( ' ', $record->rrset_values[0] );
+					$valueArray        = explode( ' ', $record->rrset_values[0] );
 					$entry['priority'] = $valueArray[0];
-					$entry['address'] = $valueArray[1];
+					$entry['address']  = $valueArray[1];
 				}
 				$hostRecords[] = $entry;
 			}
 		}
+
 		return $hostRecords;
 	} catch ( \Exception $e ) {
 		return [
@@ -728,9 +773,9 @@ function gandi_GetDNS( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_SaveDNS( $params ) {
 	gandi_LoadTranslations( $params );
@@ -742,8 +787,8 @@ function gandi_SaveDNS( $params ) {
 		$liveDns      = new LiveDNS( $params['apiKey'] );
 		$gandiRecords = $liveDns->getLiveDnsRecords( $domain );
 		foreach ( $whmcsRecords as $index => $whmcsRecord ) {
-			if ( is_array( $gandiRecords ) && isset( $gandiRecords[$index] ) ) {
-				$entryToDelete = $gandiRecords[$index];
+			if ( is_array( $gandiRecords ) && isset( $gandiRecords[ $index ] ) ) {
+				$entryToDelete = $gandiRecords[ $index ];
 				$liveDns->deleteRecord( $domain, $entryToDelete ); // Clear entry
 			}
 			$response = $liveDns->addRecord( $domain, $whmcsRecord ); // Add entry
@@ -753,6 +798,7 @@ function gandi_SaveDNS( $params ) {
 				];
 			}
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -770,9 +816,9 @@ function gandi_SaveDNS( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_RegisterNameserver( $params ) {
 	gandi_LoadTranslations( $params );
@@ -781,11 +827,12 @@ function gandi_RegisterNameserver( $params ) {
 	$domain = $sld . '.' . $tld;
 	try {
 		$api        = new ApiClient( $params['apiKey'] );
-		$nameserver = explode( '.', $params['nameserver']) ;
+		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->registerNameserver( $domain, $nameserver[0], $params['ipaddress'] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
 			throw new Exception( json_encode( $request ) );
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -803,9 +850,9 @@ function gandi_RegisterNameserver( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_ModifyNameserver( $params ) {
 	gandi_LoadTranslations( $params );
@@ -814,11 +861,12 @@ function gandi_ModifyNameserver( $params ) {
 	$domain = $sld . '.' . $tld;
 	try {
 		$api        = new ApiClient( $params['apiKey'] );
-		$nameserver = explode( '.', $params['nameserver']) ;
+		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->updateNameserver( $domain, $nameserver[0], $params['newipaddress'] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
 			throw new Exception( json_encode( $request ) );
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -834,9 +882,9 @@ function gandi_ModifyNameserver( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_DeleteNameserver( $params ) {
 	gandi_LoadTranslations( $params );
@@ -845,11 +893,12 @@ function gandi_DeleteNameserver( $params ) {
 	$domain = $sld . '.' . $tld;
 	try {
 		$api        = new ApiClient( $params['apiKey'] );
-		$nameserver = explode( '.', $params['nameserver']) ;
+		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->deleteNameserver( $domain, $nameserver[0] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
 			throw new Exception( json_encode( $request ) );
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -869,9 +918,9 @@ function gandi_DeleteNameserver( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_Sync( $params ) {
 	gandi_LoadTranslations( $params );
@@ -885,16 +934,16 @@ function gandi_Sync( $params ) {
 		if ( isset( $request->code ) ) {
 			$code = $request->code;
 		}
-		if ( in_array( $code, [403, 404] ) ) {
+		if ( in_array( $code, [ 403, 404 ] ) ) {
 			return [
 				'transferredAway' => true
 			];
 		}
-		if ( ! in_array( $code, [401, 403, 404] ) ) {
+		if ( ! in_array( $code, [ 401, 403, 404 ] ) ) {
 			return [
-				'expirydate' => date( 'Y-m-d', strtotime( $request->dates->registry_ends_at ) ),
-				'active' => true,
-				'expired' => strtotime( $request->dates->registry_ends_at ) < time(),
+				'expirydate'      => date( 'Y-m-d', strtotime( $request->dates->registry_ends_at ) ),
+				'active'          => true,
+				'expired'         => strtotime( $request->dates->registry_ends_at ) < time(),
 				'transferredAway' => false,
 			];
 		}
@@ -913,9 +962,9 @@ function gandi_Sync( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_TransferSync( $params ) {
 	gandi_LoadTranslations( $params );
@@ -928,22 +977,23 @@ function gandi_TransferSync( $params ) {
 		if ( 403 === $request->code || 404 === $request->code ) { // not finished
 			return [
 				'completed' => false,
-				'failed' => false
+				'failed'    => false
 			];
 		}
+
 		return [
 			'expirydate' => date( 'Y-m-d', strtotime( $request->dates->registry_ends_at ) ),
-			'completed' => true,
-			'failed' => false,
-			'reason' => '',
-			'error' => ''
+			'completed'  => true,
+			'failed'     => false,
+			'reason'     => '',
+			'error'      => ''
 		];
 	} catch ( \Exception $e ) {
 		return [
-			'failed' => true,
+			'failed'    => true,
 			'completed' => false,
-			'reason' => 'Transfer Error',
-			'error' => $e->getMessage()
+			'reason'    => 'Transfer Error',
+			'error'     => $e->getMessage()
 		];
 	}
 }
@@ -960,14 +1010,14 @@ function gandi_TransferSync( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_RegisterDomain( $params ) {
 	gandi_LoadTranslations( $params );
 	$sld                = $params['sld'];
-    $tld                = $params['tld'];
+	$tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
 	$registrationPeriod = $params['regperiod'];
 	$nameservers        = [];
@@ -980,44 +1030,45 @@ function gandi_RegisterDomain( $params ) {
 			$params['ns5']
 		];
 	}
-    $contacts          = [];
-    $contacts['owner'] = [
-        'firstname' => $params['firstname'],
-        'lastname' => $params['lastname'],
-        'email' => $params['email'],
-        'address' => $params['address1'],
-        'city' => $params['city'],
-        'postcode' =>  $params['postcode'],
-        'countrycode' => $params['countrycode'],
-        'countryname' => $params['countryname'],
-        'phonenumber' => $params['phonenumber'],
-        'phonecountrcCode' => $params['phonecc'],
-        'phonenumberformatted' => $params['phonenumberformatted'],
-        'orgname' => $params['companyname'],
-        'language' => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
-    ];
-    try {
-        $api          = new ApiClient( $params['apiKey'] );
-        $availability = $api->getDomainAvailability( $domain );
-        if ( $availability !== 'available' ) {
-            return [
-                'error' => $availability
-            ];
-        }
-        $response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [], $params['organization'] );
-        if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-            return [
-                   'error' => json_encode( $response )
-            ];
-        }
-	    return [
-		    'success' => 'success',
-	    ];
-    } catch ( \Exception $e ) {
-	    return [
-            'error' => $e->getMessage(),
-        ];
-    }
+	$contacts          = [];
+	$contacts['owner'] = [
+		'firstname'            => $params['firstname'],
+		'lastname'             => $params['lastname'],
+		'email'                => $params['email'],
+		'address'              => $params['address1'],
+		'city'                 => $params['city'],
+		'postcode'             => $params['postcode'],
+		'countrycode'          => $params['countrycode'],
+		'countryname'          => $params['countryname'],
+		'phonenumber'          => $params['phonenumber'],
+		'phonecountrcCode'     => $params['phonecc'],
+		'phonenumberformatted' => $params['phonenumberformatted'],
+		'orgname'              => $params['companyname'],
+		'language'             => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
+	];
+	try {
+		$api          = new ApiClient( $params['apiKey'] );
+		$availability = $api->getDomainAvailability( $domain );
+		if ( $availability !== 'available' ) {
+			return [
+				'error' => $availability
+			];
+		}
+		$response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [], $params['organization'] );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
 }
 
 /**
@@ -1032,9 +1083,9 @@ function gandi_RegisterDomain( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_TransferDomain( $params ) {
 	gandi_LoadTranslations( $params );
@@ -1055,36 +1106,37 @@ function gandi_TransferDomain( $params ) {
 	}
 	$contacts          = [];
 	$contacts['owner'] = [
-		'firstname' => $params['firstname'],
-		'lastname' => $params['lastname'],
-		'email' => $params['email'],
-		'address' => $params['address1'] . $params['address2'],
-		'city' => $params['city'],
-		'postcode' =>  $params['postcode'],
-		'countrycode' => $params['countrycode'],
-		'countryname' => $params['countryname'],
-		'phonenumber' => $params['phonenumber'],
-		'phonecountrcCode' => $params['phonecc'],
+		'firstname'            => $params['firstname'],
+		'lastname'             => $params['lastname'],
+		'email'                => $params['email'],
+		'address'              => $params['address1'] . $params['address2'],
+		'city'                 => $params['city'],
+		'postcode'             => $params['postcode'],
+		'countrycode'          => $params['countrycode'],
+		'countryname'          => $params['countryname'],
+		'phonenumber'          => $params['phonenumber'],
+		'phonecountrcCode'     => $params['phonecc'],
 		'phonenumberformatted' => $params['phonenumberformatted'],
-		'orgname' => $params['companyname'],
-		'language' => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
+		'orgname'              => $params['companyname'],
+		'language'             => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
 	];
 	try {
 		$api      = new ApiClient( $params['apiKey'] );
-        $response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [], $params['organization'] );
-	    if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-		    return [
-			    'error' => json_encode( $response )
-		    ];
-	    }
-	    return [
-		    'success' => 'success',
-	    ];
-    } catch ( \Exception $e ) {
-	    return [
-		    'error' => $e->getMessage(),
-	    ];
-    }
+		$response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [], $params['organization'] );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [
+				'error' => json_encode( $response )
+			];
+		}
+
+		return [
+			'success' => 'success',
+		];
+	} catch ( \Exception $e ) {
+		return [
+			'error' => $e->getMessage(),
+		];
+	}
 }
 
 /**
@@ -1099,9 +1151,9 @@ function gandi_TransferDomain( $params ) {
  *
  * @param array $params common module parameters
  *
+ * @return array
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return array
  */
 function gandi_RenewDomain( $params ) {
 	gandi_LoadTranslations( $params );
@@ -1117,6 +1169,7 @@ function gandi_RenewDomain( $params ) {
 				'error' => json_encode( $response )
 			];
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -1128,37 +1181,6 @@ function gandi_RenewDomain( $params ) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Client Area Custom Button Array.
  *
@@ -1168,10 +1190,8 @@ function gandi_RenewDomain( $params ) {
  *
  * @return array
  */
-function gandi_ClientAreaCustomButtonArray()
-{
-    return array(
-    );
+function gandi_ClientAreaCustomButtonArray() {
+	return array();
 }
 
 /**
@@ -1182,10 +1202,8 @@ function gandi_ClientAreaCustomButtonArray()
  *
  * @return array
  */
-function gandi_ClientAreaAllowedFunctions()
-{
-    return array(
-    );
+function gandi_ClientAreaAllowedFunctions() {
+	return array();
 }
 
 
@@ -1197,15 +1215,14 @@ function gandi_ClientAreaAllowedFunctions()
  *
  * @param array $params common module parameters
  *
+ * @return string HTML Output
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
- * @return string HTML Output
  */
-function gandi_ClientArea($params)
-{
+function gandi_ClientArea( $params ) {
 	gandi_LoadTranslations( $params );
 
-	$gandi = implode (DIRECTORY_SEPARATOR, [ ROOTDIR, 'modules', 'registrars', 'gandi', 'lang', __FILE__ ] );
+	$gandi = implode( DIRECTORY_SEPARATOR, [ ROOTDIR, 'modules', 'registrars', 'gandi', 'lang', __FILE__ ] );
 	if ( file_exists( $gandi ) ) {
 		include( $gandi );
 	}
@@ -1214,16 +1231,30 @@ function gandi_ClientArea($params)
     Your custom HTML output goes here...
 </div>
 HTML;
-	return $output.$GLOBALS['CONFIG']['Language'] . '        ' . \Lang::trans('gandi.whoisAnonymization');
+
+	return $output . $GLOBALS['CONFIG']['Language'] . '        ' . \Lang::trans( 'gandi.whoisAnonymization' );
 }
 
 
 // HOOKS
 
-add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
+add_hook( 'ClientAreaPageDomainContacts', 1, function ( $vars ) {
 	gandi_LoadTranslations( $vars );
 	$contactdetailstranslations = [];
-	foreach ( [ 'type', 'orgname', 'given', 'family', 'email', 'Phone', 'streetaddr', 'city', 'zip', 'country' ] as $key ) {
+	foreach (
+		[
+			'type',
+			'orgname',
+			'given',
+			'family',
+			'email',
+			'Phone',
+			'streetaddr',
+			'city',
+			'zip',
+			'country'
+		] as $key
+	) {
 		$contactdetailstranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
 	}
 	$contacttypestranslations = [];
@@ -1231,7 +1262,7 @@ add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
 		$contacttypestranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
 	}
 	$entitytranslations = [];
-	foreach ( ['individual', 'company', 'association', 'publicbody'] as $key ) {
+	foreach ( [ 'individual', 'company', 'association', 'publicbody' ] as $key ) {
 		$entitytranslations[ $key ] = gandi_GetTranslations( 'admin.entity.' . $key );
 	}
 	$filename = GANDI_RESOURCE_DIR . 'countries/countrycodes.php';
@@ -1240,10 +1271,11 @@ add_hook( 'ClientAreaPageDomainContacts', 1, function( $vars ) {
 	} else {
 		$country_list = [];
 	}
+
 	return [
 		'contactdetailstranslations' => $contactdetailstranslations,
-		'contacttypestranslations' => $contacttypestranslations,
-		'entitytranslations' => $entitytranslations,
-		'countrylist' => $country_list,
+		'contacttypestranslations'   => $contacttypestranslations,
+		'entitytranslations'         => $entitytranslations,
+		'countrylist'                => $country_list,
 	];
-});
+} );

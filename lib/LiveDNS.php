@@ -6,6 +6,15 @@ class LiveDNS {
 	const ENDPOINT = 'https://api.gandi.net/v5/livedns/';
 	private $apiKey;
 
+	public static function isCorrect ( $nameservers ) {
+		foreach ( $nameservers as $v ) {
+			if ( ( '' !== $v ) && ( ! str_starts_with( $v, 'ns-' ) || ! str_ends_with( $v, '.gandi.net' ) ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public function __construct( $apiKey ) {
 		$this->apiKey = $apiKey;
 	}
