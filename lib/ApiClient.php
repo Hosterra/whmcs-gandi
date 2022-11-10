@@ -10,14 +10,22 @@ class ApiClient {
 	private $registrar = GANDI_REGISTRAR_PRODUCT_NAME;
 	private static $cache = [];
 
-	public function __construct( $apiKey, $testMode = true ) {
-		$this->endPoint = $testMode ? "https://api.gandi.net/v5" : "https://api.gandi.net/v5";
+	public function __construct( $apiKey ) {
+		$this->endPoint = 'https://api.gandi.net/v5';
 		$this->apiKey   = $apiKey;
 	}
 
 	public function invalidateCache( $scope = 'all' ) {
 		if ( 'all' === $scope ) {
 			self::$cache = [];
+		} else {
+			$cache = self::$cache;
+			self::$cache = [];
+			foreach ( $cache as $k => $v ) {
+				if ( ! str_contains( $v, $scope ) ) {
+					self::$cache[ $k ] = $v;
+				}
+			}
 		}
 	}
 
