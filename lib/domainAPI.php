@@ -4,22 +4,24 @@ namespace WHMCS\Module\Registrar\Gandi;
 
 use WHMCS\Module\Registrar\Gandi\SpecialFields;
 
-class ApiClient {
+class domainAPI {
 	private $endPoint;
 	private $apiKey;
+	private $sharingId;
 	private $registrar = GANDI_REGISTRAR_PRODUCT_NAME;
 	private static $cache = [];
 
-	public function __construct( $apiKey ) {
-		$this->endPoint = 'https://api.gandi.net/v5';
-		$this->apiKey   = $apiKey;
+	public function __construct( $apiKey, $sharingId = '' ) {
+		$this->endPoint  = 'https://api.gandi.net/v5';
+		$this->apiKey    = $apiKey;
+		$this->sharingId = $sharingId;
 	}
 
 	public function invalidateCache( $scope = 'all' ) {
 		if ( 'all' === $scope ) {
 			self::$cache = [];
 		} else {
-			$cache = self::$cache;
+			$cache       = self::$cache;
 			self::$cache = [];
 			foreach ( $cache as $k => $v ) {
 				if ( ! str_contains( $v, $scope ) ) {
@@ -45,15 +47,12 @@ class ApiClient {
 		return json_decode( $response, $associative );
 	}
 
-	public function registerDomain( $domain, $contacts, $nameservers, $period, $additionalfields, $organization = '' ) {
-		$url = "{$this->endPoint}/domain/domains";
-		if ( $organization ) {
-			$url .= "?sharing_id={$organization}";
-		}
+	public function registerDomain( $domain, $contacts, $nameservers, $period, $additionalfields ) {
+		$url          = "{$this->endPoint}/domain/domains";
 		$params       = [
-			'fqdn'        => $domain,
-			'duration'    => $period,
-			'owner'       => (object) $this->generateOwner( $contacts, $additionalfields )
+			'fqdn'     => $domain,
+			'duration' => $period,
+			'owner'    => (object) $this->generateOwner( $contacts, $additionalfields )
 		];
 		$domainextras = SpecialFields::getDomain( $additionalfields );
 		if ( 0 < count( $domainextras ) ) {
@@ -75,11 +74,8 @@ class ApiClient {
 		return json_decode( $response );
 	}
 
-	public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $additionalfields, $organization = '' ) {
-		$url = "{$this->endPoint}/domain/transferin";
-		if ( $organization ) {
-			$url .= "?sharing_id={$organization}";
-		}
+	public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $additionalfields ) {
+		$url          = "{$this->endPoint}/domain/transferin";
 		$params       = [
 			'fqdn'     => $domain,
 			'duration' => $period,
@@ -284,11 +280,8 @@ class ApiClient {
 	* @return array
 	*
 	*/
-	public function renewDomain( string $domain, $period = 1, string $organization = '' ) {
-		$url = "{$this->endPoint}/domain/domains/{$domain}/renew";
-		if ( $organization ) {
-			$url .= "?sharing_id={$organization}";
-		}
+	public function renewDomain( string $domain, $period = 1 ) {
+		$url      = "{$this->endPoint}/domain/domains/{$domain}/renew";
 		$params   = [
 			'duration' => $period
 		];
@@ -469,10 +462,7 @@ class ApiClient {
 	*
 	*/
 	public function getTLDPrices( $action, $organization = '' ) {
-		$url = "{$this->endPoint}/billing/price/domain?processes={$action}";
-		if ( $organization ) {
-			$url .= "&sharing_id={$organization}";
-		}
+		$url      = "{$this->endPoint}/billing/price/domain?processes={$action}";
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $action, $response );
 
@@ -491,6 +481,9 @@ class ApiClient {
 	}
 
 	private function sendRequest( $url, $method = 'GET', $post = [], $timeout = 30 ) {
+		if ( $this->sharingId ) {
+			$url .= ( str_contains( $url, '?' ) ? '&' : '?' ) . 'sharing_id=' . $this->sharingId;
+		}
 		$curl = curl_init();
 		curl_setopt_array( $curl, [
 			CURLOPT_PORT           => '0',
