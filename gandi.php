@@ -676,7 +676,7 @@ function gandi_GetDNS( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$liveDns = new LiveDNS( $params['API Key'] );
+		$liveDns = new LiveDNS( $params['apiKey'] );
 		$records = $liveDns->getLiveDnsRecords( $domain );
 		$hostRecords = [];
 		foreach ($records as $record) {
@@ -738,7 +738,7 @@ function gandi_SaveDNS( $params ) {
 		$liveDns      = new LiveDNS( $params['apiKey'] );
 		$gandiRecords = $liveDns->getLiveDnsRecords( $domain );
 		foreach ( $whmcsRecords as $index => $whmcsRecord ) {
-			if ( is_array( $gandiRecords )  && isset( $gandiRecords[$index] ) ) {
+			if ( is_array( $gandiRecords ) && isset( $gandiRecords[$index] ) ) {
 				$entryToDelete = $gandiRecords[$index];
 				$liveDns->deleteRecord( $domain, $entryToDelete ); // Clear entry
 			}
