@@ -6,7 +6,7 @@ Use Gandi.net as registrar in WHMCS.
 
 ## Features
 - TLD prices import: **_supported_**
-- TLD grace and redemption details: **_supported_**
+- TLD grace and redemption import: **_supported_**
 - Domain registration operations: **_supported_**
 - Domain renewal operations: **_supported_**
 - Domain transfer operations: **_supported_**
