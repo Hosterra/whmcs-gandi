@@ -15,6 +15,12 @@ class ApiClient {
 		$this->apiKey   = $apiKey;
 	}
 
+	public function invalidateCache( $scope = 'all' ) {
+		if ( 'all' === $scope ) {
+			self::$cache = [];
+		}
+	}
+
 	public function getDomainInfo( $domain, $associative = false ) {
 		$url      = "{$this->endPoint}/domain/domains/{$domain}";
 		$response = $this->sendOrGetCached( $url, 'GET' );
