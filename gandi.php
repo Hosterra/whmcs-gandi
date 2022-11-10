@@ -19,7 +19,7 @@ use WHMCS\Results\ResultsList;
 use WHMCS\Domain\Registrar\Domain;
 use WHMCS\Domains\DomainLookup\ResultsList as LookupResultsList;
 use WHMCS\Domains\DomainLookup\SearchResult;
-use WHMCS\Module\Registrar\Gandi\ApiClient;
+use WHMCS\Module\Registrar\Gandi\domainAPI;
 use WHMCS\Module\Registrar\Gandi\LiveDNS;
 use WHMCS\Module\Registrar\Gandi\ERRPolicy;
 
@@ -83,8 +83,8 @@ function gandi_GetTranslations( $key ) {
  */
 function gandi_GetTLDs( $params, $action ) {
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->getTLDPrices( $action, $params['organization'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
+		$response = $api->getTLDPrices( $action );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [];
 		}
@@ -324,7 +324,7 @@ function gandi_CheckAvailability( $params ) {
 	try {
 		$results = new LookupResultsList();
 		$sld     = $params['sld'];
-		$api     = new ApiClient( $params['apiKey'] );
+		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
 		foreach ( $params['tlds'] as $tld ) {
 			$tld          = str_replace( '.', '', $tld );
 			$searchResult = new SearchResult( $sld, $tld );
@@ -417,7 +417,7 @@ function gandi_GetContactDetails( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$contacts = $api->getDomainContacts( $domain );
 
 		return [
@@ -456,7 +456,7 @@ function gandi_SaveContactDetails( $params ) {
 		foreach ( [ 'Owner', 'Technical', 'Billing', 'Admin' ] as $contact ) {
 			$contacts[ $contact ] = gandi_NormalizeContactInput( $params['contactdetails'][ $contact ] );
 		}
-		$api      = new ApiClient( $params['apiKey'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->updateDomainContacts( $domain, $contacts );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
@@ -492,7 +492,7 @@ function gandi_GetNameservers( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api     = new ApiClient( $params['apiKey'] );
+		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
 		$request = $api->getDomainNameservers( $domain );
 		if ( ! is_array( $request ) ) {
 			return [
@@ -549,7 +549,7 @@ function gandi_SaveNameservers( $params ) {
 		$nameservers[] = $params['ns5'];
 	}
 	try {
-		$api = new ApiClient( $params['apiKey'] );
+		$api = new domainAPI( $params['apiKey'], $params['organization'] );
 		if ( 'livedns' === $params['dns'] && LiveDNS::isCorrect( $nameservers ) ) {
 			$request = $api->enableLiveDNS( $domain );
 		} else {
@@ -587,7 +587,7 @@ function gandi_GetRegistrarLock( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->getDomainInfo( $domain );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
@@ -628,7 +628,7 @@ function gandi_SaveRegistrarLock( $params ) {
 	$domain     = $sld . '.' . $tld;
 	$lockStatus = $params['lockenabled'];
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->setLockDomain( $domain, 'locked' === $lockStatus );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
@@ -661,9 +661,12 @@ function gandi_SaveRegistrarLock( $params ) {
  */
 function gandi_GetEPPCode( $params ) {
 	gandi_LoadTranslations( $params );
+	$sld        = $params['sld'];
+	$tld        = $params['tld'];
+	$domain     = $sld . '.' . $tld;
 	try {
-		$api     = new ApiClient( $params['apiKey'] );
-		$request = $api->getDomainInfo( $params['domainname'] );
+		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
+		$request = $api->getDomainInfo( $domain );
 
 		return [
 			'eppcode' => $request->authinfo,
@@ -691,7 +694,7 @@ function gandi_ResendIRTPVerificationEmail( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->resendReachabilityMail( $domain );
 		if ( ( isset( $response->code ) && 202 < (int) $response->code ) ) {
 			return [
@@ -728,7 +731,7 @@ function gandi_GetDNS( $params ) {
 		$records     = $liveDns->getLiveDnsRecords( $domain );
 		$hostRecords = [];
 		foreach ( $records as $record ) {
-			if ( ! in_array( $record->rrset_type, [ 'A', 'AAAA', 'MXE', 'MX', 'CNAME', 'TXT', 'URL', 'FRAME' ] ) ) {
+			if ( ! in_array( $record->rrset_type, [ 'A', 'AAAA', 'MXE', 'MX', 'CNAME', 'TXT', 'URL', 'FRAME', 'NS' ] ) ) {
 				continue; // Only allow supported WHMCS types
 			}
 			if ( 1 < count( $record->rrset_values ) ) {
@@ -826,7 +829,7 @@ function gandi_RegisterNameserver( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api        = new ApiClient( $params['apiKey'] );
+		$api        = new domainAPI( $params['apiKey'], $params['organization'] );
 		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->registerNameserver( $domain, $nameserver[0], $params['ipaddress'] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
@@ -860,7 +863,7 @@ function gandi_ModifyNameserver( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api        = new ApiClient( $params['apiKey'] );
+		$api        = new domainAPI( $params['apiKey'], $params['organization'] );
 		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->updateNameserver( $domain, $nameserver[0], $params['newipaddress'] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
@@ -892,7 +895,7 @@ function gandi_DeleteNameserver( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api        = new ApiClient( $params['apiKey'] );
+		$api        = new domainAPI( $params['apiKey'], $params['organization'] );
 		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->deleteNameserver( $domain, $nameserver[0] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
@@ -928,7 +931,7 @@ function gandi_Sync( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api     = new ApiClient( $params['apiKey'] );
+		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
 		$request = $api->getDomainInfo( $domain );
 		$code    = 200;
 		if ( isset( $request->code ) ) {
@@ -972,7 +975,7 @@ function gandi_TransferSync( $params ) {
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
-		$api     = new ApiClient( $params['apiKey'] );
+		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
 		$request = $api->getDomainInfo( $domain );
 		if ( 403 === $request->code || 404 === $request->code ) { // not finished
 			return [
@@ -1047,14 +1050,14 @@ function gandi_RegisterDomain( $params ) {
 		'language'             => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
 	];
 	try {
-		$api          = new ApiClient( $params['apiKey'] );
+		$api          = new domainAPI( $params['apiKey'], $params['organization'] );
 		$availability = $api->getDomainAvailability( $domain );
 		if ( $availability !== 'available' ) {
 			return [
 				'error' => $availability
 			];
 		}
-		$response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [], $params['organization'] );
+		$response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [] );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
@@ -1121,8 +1124,8 @@ function gandi_TransferDomain( $params ) {
 		'language'             => ( empty( $params['language'] ) ) ? $GLOBALS['CONFIG']['Language'] : $params['language']
 	];
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [], $params['organization'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
+		$response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [] );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
@@ -1162,8 +1165,8 @@ function gandi_RenewDomain( $params ) {
 	$domain             = $sld . '.' . $tld;
 	$registrationPeriod = $params['regperiod'];
 	try {
-		$api      = new ApiClient( $params['apiKey'] );
-		$response = $api->renewDomain( $domain, $registrationPeriod, $params['organization'] );
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
+		$response = $api->renewDomain( $domain, $registrationPeriod );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
