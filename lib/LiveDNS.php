@@ -73,7 +73,6 @@ class LiveDNS {
 		} else {
 			$params['rrset_values'] = [ $record['address'] ];
 		}
-		//var_dump($params);die();
 		$response = $this->sendRequest( $url, "POST", $params );
 		logModuleCall( 'Gandi Registrar', 'LiveDNS add record', [ $domain, $params ], $response );
 
@@ -94,7 +93,7 @@ class LiveDNS {
 	*/
 	private function sendRequest( string $url, $method = "GET", array $post = [], $timeout = 30 ) {
 		$curl = curl_init();
-		curl_setopt_array( $curl, array(
+		curl_setopt_array( $curl, [
 			CURLOPT_PORT           => '0',
 			CURLOPT_URL            => $url,
 			CURLOPT_RETURNTRANSFER => true,
@@ -103,29 +102,17 @@ class LiveDNS {
 			CURLOPT_TIMEOUT        => $timeout,
 			CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST  => $method,
-			CURLOPT_HTTPHEADER     => array(
+			CURLOPT_HTTPHEADER     => [
 				"authorization: Apikey {$this->apiKey}",
 				"content-type: application/json"
-			),
-			CURLOPT_USERAGENT      => 'WHMCS/1.3',
-			CURLINFO_HEADER_OUT    => true
-		) );
-		if ( $method == "POST" ) {
-			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => "POST" ] );
-			curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS => json_encode( $post ) ] );
+			],
+			CURLOPT_USERAGENT      => 'WHMCS/1.3'
+		] );
+		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH', 'DELETE' ] ) ) {
+			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => $method ] );
 		}
-		if ( $method == "PUT" ) {
-			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => "PUT" ] );
+		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH' ] ) ) {
 			curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS => json_encode( $post ) ] );
-		}
-
-		if ( $method == "PATCH" ) {
-			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => "PATCH" ] );
-			curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS => json_encode( $post ) ] );
-		}
-
-		if ( $method == "DELETE" ) {
-			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => "DELETE" ] );
 		}
 		$response = curl_exec( $curl );
 		$err      = curl_error( $curl );
