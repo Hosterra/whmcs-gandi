@@ -7,20 +7,18 @@ Use Gandi.net as registrar in WHMCS.
 ## Features
 - TLD prices import: **_supported_**
 - TLD grace and redemption details: **_supported_**
-- Registration operations: **_supported_**
-- Renewal operations: **_supported_**
-- Transfer operations: **_supported_**
-- Transfer protection (lock/unlock): **_supported_**
-- EPP management: **_supported_**
+- Domain registration operations: **_supported_**
+- Domain renewal operations: **_supported_**
+- Domain transfer operations: **_supported_**
+- Domain transfer protection (lock/unlock): **_supported_**
+- Domain EPP management: **_supported_**
 - WHOIS privacy protection: **_supported_** (see following note about ID Protect)
-- Delete operations: **_not supported_**
-- Release operations: **_not supported_**
+- Name servers management: **_supported_**
+- Domain delete operations: **_not supported_**
+- Domain release operations: **_not supported_**
 
 > 💡️️ The WHMCS IDProtect operations are not implemented in this module: by default, all anonymization options are enforced for TLDs supporting it, whatever is specified for each individual TLD.
 
-## Technical
-- DNS support for self managed and Gandi LiveDNS
-- Automatic query caching
 
 ## How to install
 1. In your WHCMS installation, in the `modules/registrars/`, create a `gandi` directory.
