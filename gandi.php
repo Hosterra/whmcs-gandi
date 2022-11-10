@@ -463,9 +463,13 @@ function gandi_GetNameservers( $params ) {
 				'success' => false
 			];
 		}
-		$response = [
-		];
+		$response = [];
 		foreach ( $request as $k => $v ) {
+			if ( 'livedns' === $params['dns'] ) {
+					if ( str_starts_with( $v, 'ns-' ) && str_ends_with( $v, '.gandi.net' ) ) {
+						continue;
+					}
+			}
 			$index                     = $k + 1;
 			$response[ 'ns' . $index ] = $v;
 		}
@@ -944,35 +948,6 @@ function gandi_TransferSync( $params ) {
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Register a domain.
  *
@@ -991,8 +966,7 @@ function gandi_TransferSync( $params ) {
  */
 function gandi_RegisterDomain( $params ) {
 	gandi_LoadTranslations( $params );
-	/*highlight_string("<?php\n \n" . var_export($params, true) . ";\n?>");die();*/
-    $sld                = $params['sld'];
+	$sld                = $params['sld'];
     $tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
 	$registrationPeriod = $params['regperiod'];
@@ -1030,7 +1004,7 @@ function gandi_RegisterDomain( $params ) {
                 'error' => $availability
             ];
         }
-        $response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['organization'] );
+        $response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [], $params['organization'] );
         if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
             return [
                    'error' => json_encode( $response )
@@ -1097,7 +1071,7 @@ function gandi_TransferDomain( $params ) {
 	];
 	try {
 		$api      = new ApiClient( $params['apiKey'] );
-        $response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['organization'] );
+        $response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [], $params['organization'] );
 	    if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 		    return [
 			    'error' => json_encode( $response )
