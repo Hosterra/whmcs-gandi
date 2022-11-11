@@ -556,7 +556,7 @@ function gandi_SaveNameservers( $params ) {
 			$request = $api->updateDomainNameservers( $domain, $nameservers );
 		}
 		$api->invalidateCache( $domain . '/nameservers' );
-		if ( ( isset( $request->code ) && $request->code != 202 ) || isset( $request->errors ) ) {
+		if ( ( isset( $request->code ) && $request->code != 202 && $request->code != 409 ) || isset( $request->errors ) ) {
 			throw new Exception( json_encode( $request ) );
 		}
 
