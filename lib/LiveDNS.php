@@ -66,8 +66,10 @@ class LiveDNS {
 		$params = [
 			'rrset_name'   => $record['hostname'],
 			'rrset_type'   => $record['type'],
-			'rrset_values' => [ $record['address'] ]
 		];
+		if ( $record['recid'] ) {
+			$params['rrset_ttl'] = (int) $record['recid'];
+		}
 		if ( $record['type'] == 'MX' ) {
 			$params['rrset_values'] = [ "{$record['priority']} {$record['address']}" ];
 		} else {

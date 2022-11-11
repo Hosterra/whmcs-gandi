@@ -730,6 +730,12 @@ function gandi_ResendIRTPVerificationEmail( $params ) {
  *
  */
 function gandi_GetDNS( $params ) {
+	$filename = GANDI_RESOURCE_DIR . 'dns/recordtypes.php';
+	if ( file_exists( $filename ) ) {
+		include $filename;
+	} else {
+		$allowed_recordtypes = [ 'standard' => [], 'extended' => [] ];
+	}
 	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
@@ -739,15 +745,16 @@ function gandi_GetDNS( $params ) {
 		$records     = $liveDns->getLiveDnsRecords( $domain );
 		$hostRecords = [];
 		foreach ( $records as $record ) {
-			if ( ! in_array( $record->rrset_type, [ 'A', 'AAAA', 'MXE', 'MX', 'CNAME', 'TXT', 'URL', 'FRAME', 'NS' ] ) ) {
-				continue; // Only allow supported WHMCS types
+			if ( ! in_array( $record->rrset_type, $allowed_recordtypes[ $params['recordset'] ] ) ) {
+				continue;
 			}
 			if ( 1 < count( $record->rrset_values ) ) {
 				foreach ( $record->rrset_values as $k => $v ) {
 					$entry = [
-						'hostname' => $record->rrset_name, // eg. www
-						'type'     => $record->rrset_type, // eg. A
-						'address'  => $record->rrset_values[ $k ], // eg. 10.0.0.1
+						'hostname' => $record->rrset_name,
+						'type'     => $record->rrset_type,
+						'address'  => $record->rrset_values[ $k ],
+						'recid'    => $record->rrset_ttl ?? 300,
 					];
 					if ( $record->rrset_type == 'MX' ) {
 						$valueArray        = explode( ' ', $record->rrset_values[ $k ] );
@@ -758,9 +765,10 @@ function gandi_GetDNS( $params ) {
 				}
 			} else {
 				$entry = [
-					'hostname' => $record->rrset_name, // eg. www
-					'type'     => $record->rrset_type, // eg. A
-					'address'  => $record->rrset_values[0], // eg. 10.0.0.1
+					'hostname' => $record->rrset_name,
+					'type'     => $record->rrset_type,
+					'address'  => $record->rrset_values[0],
+					'recid'    => $record->rrset_ttl ?? 300,
 				];
 				if ( $record->rrset_type == 'MX' ) {
 					$valueArray        = explode( ' ', $record->rrset_values[0] );
@@ -801,6 +809,9 @@ function gandi_SaveDNS( $params ) {
 			if ( is_array( $gandiRecords ) && isset( $gandiRecords[ $index ] ) ) {
 				$entryToDelete = $gandiRecords[ $index ];
 				$liveDns->deleteRecord( $domain, $entryToDelete ); // Clear entry
+			}
+			if ( '-RMV-' === $whmcsRecord['type'] ) {
+				continue;
 			}
 			$response = $liveDns->addRecord( $domain, $whmcsRecord ); // Add entry
 			if ( 404 === $response->code ) {
