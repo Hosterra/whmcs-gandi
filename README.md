@@ -13,8 +13,7 @@ Use Gandi.net as registrar in WHMCS.
 - Domain transfer protection (lock/unlock): **_supported_**
 - Domain EPP management: **_supported_**
 - Name servers management: **_supported_**
-- DNS records creation and update: **_supported_**
-- DNS records deletion: **_supported_** (needs template customization)
+- DNS records creation, update and deletion: **_supported_**
 - DNS ttl management: **_supported_** (needs template customization)
 - Extended DNS record types: **_supported_** (needs template customization)
 - WHOIS privacy protection: **_supported_** (see following note about ID Protect)

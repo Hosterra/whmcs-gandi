@@ -808,12 +808,12 @@ function gandi_SaveDNS( $params ) {
 		foreach ( $whmcsRecords as $index => $whmcsRecord ) {
 			if ( is_array( $gandiRecords ) && isset( $gandiRecords[ $index ] ) ) {
 				$entryToDelete = $gandiRecords[ $index ];
-				$liveDns->deleteRecord( $domain, $entryToDelete ); // Clear entry
+				$liveDns->deleteRecord( $domain, $entryToDelete );
 			}
-			if ( '-RMV-' === $whmcsRecord['type'] ) {
+			if ( '' === $whmcsRecord['hostname'] ) {
 				continue;
 			}
-			$response = $liveDns->addRecord( $domain, $whmcsRecord ); // Add entry
+			$response = $liveDns->addRecord( $domain, $whmcsRecord );
 			if ( 404 === $response->code ) {
 				return [
 					'error' => "LiveDNS not enabled",
