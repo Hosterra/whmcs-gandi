@@ -272,6 +272,14 @@ function gandi_getConfigArray( $params ) {
 					'whmcs'   => gandi_GetTranslations( 'admin.dns.whmcs' ),
 				],
 			],
+			'recordset'          => [
+				'FriendlyName' => gandi_GetTranslations( 'admin.recordset' ),
+				'Type'         => 'dropdown',
+				'Options'      => [
+					'standard' => gandi_GetTranslations( 'admin.recordset.standard' ),
+					'extended' => gandi_GetTranslations( 'admin.recordset.extended' ),
+				],
+			],
 			'version'      => [
 				'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
 				'Type'         => 'text',
