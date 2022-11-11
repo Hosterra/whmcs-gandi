@@ -91,7 +91,7 @@ class LiveDNS {
 	* @return array
 	*
 	*/
-	private function sendRequest( string $url, $method = "GET", array $post = [], $timeout = 30 ) {
+	private function sendRequest( $url, $method = 'GET', $body = [], $timeout = 30 ) {
 		$curl = curl_init();
 		curl_setopt_array( $curl, [
 			CURLOPT_PORT           => '0',
@@ -111,8 +111,8 @@ class LiveDNS {
 		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH', 'DELETE' ] ) ) {
 			curl_setopt_array( $curl, [ CURLOPT_CUSTOMREQUEST => $method ] );
 		}
-		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH' ] ) ) {
-			curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS => json_encode( $post ) ] );
+		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH' ] ) && 0 < count( $body ) ) {
+			curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS => json_encode( $body ) ] );
 		}
 		$response = curl_exec( $curl );
 		$err      = curl_error( $curl );
