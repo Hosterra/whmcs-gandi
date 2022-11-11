@@ -280,6 +280,11 @@ function gandi_getConfigArray( $params ) {
 					'extended' => gandi_GetTranslations( 'admin.recordset.extended' ),
 				],
 			],
+			'secprev' => [
+				'FriendlyName' => gandi_GetTranslations( 'admin.secprev' ),
+				'Type' => 'yesno',
+				'Description' => gandi_GetTranslations( 'admin.secprev.check' ),
+			],
 			'version'      => [
 				'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
 				'Type'         => 'text',
@@ -1213,6 +1218,9 @@ function gandi_RenewDomain( $params ) {
  * @return array
  */
 function gandi_ClientAreaCustomButtonArray() {
+	return array(
+		"Push Domain" => "push",
+	);
 	return array();
 }
 
@@ -1242,19 +1250,48 @@ function gandi_ClientAreaAllowedFunctions() {
  *
  */
 function gandi_ClientArea( $params ) {
-	gandi_LoadTranslations( $params );
-
-	$gandi = implode( DIRECTORY_SEPARATOR, [ ROOTDIR, 'modules', 'registrars', 'gandi', 'lang', __FILE__ ] );
-	if ( file_exists( $gandi ) ) {
-		include( $gandi );
+	if ( ! $params['secprev'] || ( array_key_exists( 'registrar', $params ) && 'gandi' !== $params['registrar'] ) ) {
+		return '';
 	}
-	$output = <<<HTML
-<div class="alert alert-info">
-    Your custom HTML output goes here...
-</div>
-HTML;
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
+	$idprotect = Lang::trans( 'gandi.infopanel.noinfo' );
+	$dns       = Lang::trans( 'gandi.infopanel.noinfo' );
+	try {
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
+		$response = $api->getDomainInfo( $domain );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			throw new Exception( 'Information not available' );
+		}
+		if ( is_array( $response->status ) ) {
+			if ( in_array( 'clientTransferProhibited', $response->status ) && $response->can_tld_lock ) {
+				$idprotect = Lang::trans( 'gandi.infopanel.idprotectyes' );
+			} else {
+				$idprotect = Lang::trans( 'gandi.infopanel.idprotectno' );
+			}
+		}
+		if ( is_array( $response->nameservers ) ) {
+			if ( LiveDNS::isCorrect( $response->nameservers ) ) {
+				$dns = Lang::trans( 'gandi.dns.livedns' );
+			} else {
+				$dns = Lang::trans( 'gandi.dns.external' );
+			}
+		}
+	} catch ( \Exception $e ) {
 
-	return $output . $GLOBALS['CONFIG']['Language'] . '        ' . \Lang::trans( 'gandi.whoisAnonymization' );
+	}
+
+	/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
+
+	$output  = '<div class="panel panel-default">';
+	$output .= ' <div class="panel-heading"><h3 class="panel-title">' . Lang::trans( 'gandi.infopanel.secprev' ) . '</h3></div>';
+	$output .= ' <ul class="list-info list-info-50 list-info-bordered">';
+	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.infopanel.idprotect' ) . '</span><span class="list-info-text"><span>' . $idprotect . '</span></span></li>';
+	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.dns' ) . '</span><span class="list-info-text"><span>' . $dns . '</span></span></li>';
+	$output .= ' </ul>';
+	$output .= '</div>';
+	return $output;
 }
 
 

@@ -15,6 +15,8 @@ define( 'GANDI_LANG', [
 	'admin.recordset' => "DNS record types",
 	'admin.recordset.standard' => "Standard - only WHMCS supported types",
 	'admin.recordset.extended' => "Extended - all LiveDNS supported types",
+	'admin.secprev' => "Security & privacy",
+	'admin.secprev.check' => "Display in domain overview page",
 	'admin.dns' => "DNS to use",
 	'admin.dns.livedns' => "Gandi LiveDNS",
 	'admin.dns.whmcs' => "Other",
@@ -35,6 +37,4 @@ define( 'GANDI_LANG', [
 	'admin.entity.company' => "Company",
 	'admin.entity.association' => "Association / NGO",
 	'admin.entity.publicbody' => "Public body",
-
-
 ] );
