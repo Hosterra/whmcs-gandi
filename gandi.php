@@ -237,7 +237,7 @@ function gandi_getConfigArray( $params ) {
 	gandi_LoadTranslations( $params );
 	if ( array_key_exists( 'apiKey', $params ) && '' !== $params['apiKey'] ) {
 		try {
-			$api              = new ApiClient( $params['apiKey'] );
+			$api              = new domainAPI( $params['apiKey'], $params['organization'] ?? '' );
 			$organizationList = [];
 			$organizations    = $api->getOrganizations();
 			if ( is_array( $organizations ) ) {
