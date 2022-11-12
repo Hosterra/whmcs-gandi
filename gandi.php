@@ -8,7 +8,6 @@ define( 'GANDI_REGISTRAR_PRODUCT_NAME', 'Gandi Registrar' );
 define( 'GANDI_REGISTRAR_PRODUCT_URL', 'https://github.com/Hosterra/whmcs-gandi' );
 define( 'GANDI_REGISTRAR_API_VERSION', '5' );
 define( 'GANDI_REGISTRAR_VERSION', '5.0.0' );
-define( 'GANDI_LANG_DIR', dirname( __FILE__ ) . '/lang/' );
 define( 'GANDI_RESOURCE_DIR', dirname( __FILE__ ) . '/resources/' );
 define( 'GANDI_CONTACT_TYPES', [ 'individual', 'company', 'association', 'publicbody', 'reseller' ] );
 
@@ -39,42 +38,6 @@ function gandi_MetaData() {
 		'DisplayName' => GANDI_REGISTRAR_PRODUCT_NAME . ' v' . GANDI_REGISTRAR_VERSION,
 		'APIVersion'  => '1.1',
 	];
-}
-
-/**
- * Load translations if not already done
- */
-function gandi_LoadTranslations( $reference ) {
-	if ( ! defined( 'GANDI_LANG' ) ) {
-		$lang = 'none';
-		if ( array_key_exists( 'language', $reference ) ) {
-			$lang = strtolower( $reference['language'] );
-		} elseif ( array_key_exists( 'activeLocale', $reference ) && is_array( $reference['activeLocale'] ) && array_key_exists( 'language', $reference['activeLocale'] ) ) {
-			$lang = strtolower( $reference['activeLocale']['language'] );
-		} else {
-			global $aInt;
-			if ( isset( $aInt ) ) {
-				$lang = strtolower( $aInt->language );
-			}
-		}
-		$filename = GANDI_LANG_DIR . $lang . '.php';
-		if ( file_exists( $filename ) ) {
-			include $filename;
-		}
-	}
-}
-
-/**
- * Get a string translation
- *
- * @return string
- */
-function gandi_GetTranslations( $key ) {
-	if ( defined( 'GANDI_LANG' ) && is_array( GANDI_LANG ) && array_key_exists( $key, GANDI_LANG ) ) {
-		return GANDI_LANG[ $key ];
-	}
-
-	return $key;
 }
 
 /**
@@ -235,7 +198,6 @@ function gandi_NormalizeContactInput( $contact ) {
  * @return array
  */
 function gandi_getConfigArray( $params ) {
-	gandi_LoadTranslations( $params );
 	if ( array_key_exists( 'apiKey', $params ) && '' !== $params['apiKey'] ) {
 		try {
 			$api              = new domainAPI( $params['apiKey'], $params['organization'] ?? '' );
@@ -256,42 +218,42 @@ function gandi_getConfigArray( $params ) {
 				'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
 			],
 			'apiKey'       => [
-				'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
+				'FriendlyName' => Lang::Trans( 'gandiadmin.apikey' ),
 				'Type'         => 'password',
 				'Size'         => '100',
 			],
 			'organization' => [
-				'FriendlyName' => gandi_GetTranslations( 'admin.organization' ),
+				'FriendlyName' => Lang::Trans( 'gandiadmin.organization' ),
 				'Type'         => 'dropdown',
 				'Options'      => $organizationsList,
 			],
 			'dns'          => [
-				'FriendlyName' => gandi_GetTranslations( 'admin.dns' ),
+				'FriendlyName' => Lang::Trans( 'gandiadmin.dns.name' ),
 				'Type'         => 'dropdown',
 				'Options'      => [
-					'livedns' => gandi_GetTranslations( 'admin.dns.livedns' ),
-					'whmcs'   => gandi_GetTranslations( 'admin.dns.whmcs' ),
+					'livedns' => Lang::Trans( 'gandiadmin.dns.livedns' ),
+					'whmcs'   => Lang::Trans( 'gandiadmin.dns.whmcs' ),
 				],
 			],
 			'recordset'          => [
-				'FriendlyName' => gandi_GetTranslations( 'admin.recordset' ),
+				'FriendlyName' => Lang::Trans( 'gandiadmin.recordset.name' ),
 				'Type'         => 'dropdown',
 				'Options'      => [
-					'standard' => gandi_GetTranslations( 'admin.recordset.standard' ),
-					'extended' => gandi_GetTranslations( 'admin.recordset.extended' ),
+					'standard' => Lang::Trans( 'gandiadmin.recordset.standard' ),
+					'extended' => Lang::Trans( 'gandiadmin.recordset.extended' ),
 				],
 			],
 			'secprev' => [
-				'FriendlyName' => gandi_GetTranslations( 'admin.secprev' ),
+				'FriendlyName' => Lang::Trans( 'gandiadmin.secprev.name' ),
 				'Type' => 'yesno',
-				'Description' => gandi_GetTranslations( 'admin.secprev.check' ),
+				'Description' => Lang::Trans( 'gandiadmin.secprev.check' ),
 			],
 			'version'      => [
 				'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
 				'Type'         => 'text',
 				'Size'         => '100',
 				'Disabled'     => true,
-				'Placeholder'  => gandi_GetTranslations( 'admin.sponsor' ),
+				'Placeholder'  => 'Sponsored by Hosterra - https://hosterra.eu',
 			],
 		];
 	}
@@ -302,7 +264,7 @@ function gandi_getConfigArray( $params ) {
 			'Value' => GANDI_REGISTRAR_PRODUCT_NAME,
 		],
 		'apiKey'       => [
-			'FriendlyName' => gandi_GetTranslations( 'admin.apikey' ),
+			'FriendlyName' => Lang::Trans( 'gandiadmin.apikey' ),
 			'Type'         => 'password',
 			'Size'         => '100',
 		],
@@ -311,7 +273,7 @@ function gandi_getConfigArray( $params ) {
 			'Type'         => 'text',
 			'Size'         => '100',
 			'Disabled'     => true,
-			'Placeholder'  => gandi_GetTranslations( 'admin.sponsor' ),
+			'Placeholder'  => Lang::Trans( 'gandiadmin.sponsor' ),
 		],
 	];
 }
@@ -334,7 +296,6 @@ function gandi_getConfigArray( $params ) {
  * @see \WHMCS\Domains\DomainLookup\SearchResult
  */
 function gandi_CheckAvailability( $params ) {
-	gandi_LoadTranslations( $params );
 	try {
 		$results = new LookupResultsList();
 		$sld     = $params['sld'];
@@ -426,7 +387,6 @@ function gandi_GetTldPricing( $params ) {
  *
  */
 function gandi_GetContactDetails( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -461,7 +421,6 @@ function gandi_GetContactDetails( $params ) {
  *
  */
 function gandi_SaveContactDetails( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -501,7 +460,6 @@ function gandi_SaveContactDetails( $params ) {
  *
  */
 function gandi_GetNameservers( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -542,7 +500,6 @@ function gandi_GetNameservers( $params ) {
  *
  */
 function gandi_SaveNameservers( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld         = $params['sld'];
 	$tld         = $params['tld'];
 	$domain      = $sld . '.' . $tld;
@@ -596,7 +553,6 @@ function gandi_SaveNameservers( $params ) {
  *
  */
 function gandi_GetRegistrarLock( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -636,7 +592,6 @@ function gandi_GetRegistrarLock( $params ) {
  *
  */
 function gandi_SaveRegistrarLock( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld        = $params['sld'];
 	$tld        = $params['tld'];
 	$domain     = $sld . '.' . $tld;
@@ -649,7 +604,7 @@ function gandi_SaveRegistrarLock( $params ) {
 				'error' => json_encode( $response )
 			];
 		}
-
+		sleep(10);
 		return [
 			'success' => 'success',
 		];
@@ -674,7 +629,6 @@ function gandi_SaveRegistrarLock( $params ) {
  *
  */
 function gandi_GetEPPCode( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld        = $params['sld'];
 	$tld        = $params['tld'];
 	$domain     = $sld . '.' . $tld;
@@ -703,7 +657,6 @@ function gandi_GetEPPCode( $params ) {
  *
  */
 function gandi_ResendIRTPVerificationEmail( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -742,7 +695,6 @@ function gandi_GetDNS( $params ) {
 	} else {
 		$allowed_recordtypes = [ 'standard' => [], 'extended' => [] ];
 	}
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -803,7 +755,6 @@ function gandi_GetDNS( $params ) {
  *
  */
 function gandi_SaveDNS( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -849,7 +800,6 @@ function gandi_SaveDNS( $params ) {
  *
  */
 function gandi_RegisterNameserver( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -883,7 +833,6 @@ function gandi_RegisterNameserver( $params ) {
  *
  */
 function gandi_ModifyNameserver( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -915,7 +864,6 @@ function gandi_ModifyNameserver( $params ) {
  *
  */
 function gandi_DeleteNameserver( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -951,7 +899,6 @@ function gandi_DeleteNameserver( $params ) {
  *
  */
 function gandi_Sync( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -995,7 +942,6 @@ function gandi_Sync( $params ) {
  *
  */
 function gandi_TransferSync( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -1043,7 +989,6 @@ function gandi_TransferSync( $params ) {
  *
  */
 function gandi_RegisterDomain( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld                = $params['sld'];
 	$tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
@@ -1116,7 +1061,6 @@ function gandi_RegisterDomain( $params ) {
  *
  */
 function gandi_TransferDomain( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld                = $params['sld'];
 	$tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
@@ -1184,7 +1128,6 @@ function gandi_TransferDomain( $params ) {
  *
  */
 function gandi_RenewDomain( $params ) {
-	gandi_LoadTranslations( $params );
 	$sld                = $params['sld'];
 	$tld                = $params['tld'];
 	$domain             = $sld . '.' . $tld;
@@ -1207,7 +1150,6 @@ function gandi_RenewDomain( $params ) {
 		];
 	}
 }
-
 
 /**
  * Client Area Custom Button Array.
@@ -1316,7 +1258,6 @@ function gandi_ClientArea( $params ) {
 // HOOKS
 
 add_hook( 'ClientAreaPageDomainContacts', 1, function ( $vars ) {
-	gandi_LoadTranslations( $vars );
 	$contactdetailstranslations = [];
 	foreach (
 		[
@@ -1332,15 +1273,15 @@ add_hook( 'ClientAreaPageDomainContacts', 1, function ( $vars ) {
 			'country'
 		] as $key
 	) {
-		$contactdetailstranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
+		$contactdetailstranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
 	}
 	$contacttypestranslations = [];
 	foreach ( [ 'owner', 'technical', 'admin', 'billing' ] as $key ) {
-		$contacttypestranslations[ $key ] = gandi_GetTranslations( 'admin.contact.' . $key );
+		$contacttypestranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
 	}
 	$entitytranslations = [];
 	foreach ( [ 'individual', 'company', 'association', 'publicbody' ] as $key ) {
-		$entitytranslations[ $key ] = gandi_GetTranslations( 'admin.entity.' . $key );
+		$entitytranslations[ $key ] = Lang::Trans( 'gandiadmin.entity.' . $key );
 	}
 	$filename = GANDI_RESOURCE_DIR . 'countries/countrycodes.php';
 	if ( file_exists( $filename ) ) {
