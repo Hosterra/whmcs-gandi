@@ -29,10 +29,10 @@ class DNSSEC {
 		try {
 			$response = $api->getLiveDNSInfo( $this->domain );
 			if ( ( isset( $response->code ) && 200 !== (int) $response->code ) ) {
-				throw new Exception( 'Information not available' );
+				throw new \Exception( 'Information not available' );
 			}
 			if ( 'livedns' !== $response->current ) {
-				throw new Exception( 'Not a LiveDNS domain' );
+				throw new \Exception( 'Not a LiveDNS domain' );
 			}
 			$this->isactivable = $response->livednssec_available;
 		} catch ( \Exception $e ) {
@@ -44,7 +44,7 @@ class DNSSEC {
 			try {
 				$response = $api->getDNSSEC( $this->domain );
 				if ( isset( $response->code ) ) {
-					throw new Exception( 'Information not available' );
+					throw new \Exception( 'Information not available' );
 				}
 				$this->keys = (array) $response;
 				$this->isactivated = ( 0 < count( $this->keys ) );
@@ -95,6 +95,26 @@ class DNSSEC {
 			$this->checkStatus();
 		}
 		return $this->isactivated;
+	}
+
+	/*
+	*
+	* Verify if DNSSEC is activated.
+	*
+	* @return boolean
+	*
+	*/
+	public function enable() {
+		$api = new domainAPI( $this->apiKey, $this->sharingId );
+		try {
+			$response = $api->setDNSSEC( $this->domain );
+			if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+				throw new \Exception( 'Information not available' );
+			}
+			return true;
+		} catch ( \Exception $e ) {
+			return false;
+		}
 	}
 
 

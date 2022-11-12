@@ -426,7 +426,7 @@ function gandi_SaveContactDetails( $params ) {
 	$domain = $sld . '.' . $tld;
 	try {
 		$contacts = [];
-		foreach ( [ 'Owner', 'Technical', 'Billing', 'Admin' ] as $contact ) {
+		foreach ( [ 'Technical', 'Billing', 'Admin' ] as $contact ) {
 			$contacts[ $contact ] = gandi_NormalizeContactInput( $params['contactdetails'][ $contact ] );
 		}
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
@@ -436,8 +436,6 @@ function gandi_SaveContactDetails( $params ) {
 				'error' => json_encode( $response )
 			];
 		}
-		sleep( 5 );
-
 		return [
 			'success' => 'success',
 		];
@@ -528,7 +526,7 @@ function gandi_SaveNameservers( $params ) {
 		}
 		$api->invalidateCache( $domain . '/nameservers' );
 		if ( ( isset( $request->code ) && $request->code != 202 && $request->code != 409 ) || isset( $request->errors ) ) {
-			throw new Exception( json_encode( $request ) );
+			throw new \Exception( json_encode( $request ) );
 		}
 
 		return [
@@ -808,7 +806,7 @@ function gandi_RegisterNameserver( $params ) {
 		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->registerNameserver( $domain, $nameserver[0], $params['ipaddress'] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
-			throw new Exception( json_encode( $request ) );
+			throw new \Exception( json_encode( $request ) );
 		}
 
 		return [
@@ -841,7 +839,7 @@ function gandi_ModifyNameserver( $params ) {
 		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->updateNameserver( $domain, $nameserver[0], $params['newipaddress'] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
-			throw new Exception( json_encode( $request ) );
+			throw new \Exception( json_encode( $request ) );
 		}
 
 		return [
@@ -872,7 +870,7 @@ function gandi_DeleteNameserver( $params ) {
 		$nameserver = explode( '.', $params['nameserver'] );
 		$request    = $api->deleteNameserver( $domain, $nameserver[0] );
 		if ( ( isset( $request->code ) && 202 !== $request->code ) || isset( $request->errors ) ) {
-			throw new Exception( json_encode( $request ) );
+			throw new \Exception( json_encode( $request ) );
 		}
 
 		return [
@@ -1160,11 +1158,69 @@ function gandi_RenewDomain( $params ) {
  *
  * @return array
  */
+function gandi_Dnssec( $params ) {
+	/*highlight_string("<?php\n\$data =\n" . var_export(random_bytes(1024), true) . ";\n?>");die();*/
+	$sld                = $params['sld'];
+	$tld                = $params['tld'];
+	$domain             = $sld . '.' . $tld;
+	$dnssec = new DNSSEC( $params['apiKey'], $params['organization'], $domain );
+	if ( filter_input( INPUT_POST, 'addKey' ) ) {
+		$dnssec->enable();
+	}
+	$rmKey  = false;
+	$addKey = false;
+	$keys   = [];
+	if ( $dnssec->isActivable() ) {
+		$desc = Lang::trans( 'gandi.dnssec.nokey' );
+		if ( $dnssec->isActivated() ) {
+			$desc = Lang::trans( 'gandi.dnssec.yeskey' );
+			$rmKey  = true;
+			foreach ( $dnssec->getKeys() as $key ) {
+				$keys[] = [
+					'id' => $key->id ?? '-',
+				];
+			}
+		} else {
+			$addKey = true;
+		}
+	} else {
+		$desc = Lang::trans( 'gandi.dnssec.nonokey' );
+	}
+
+
+
+
+
+
+
+
+	return [
+		'templatefile' => 'dnssec',
+		'breadcrumb'   => [
+			'clientarea.php?action=domaindetails&domainid=' . $params['domainid'] . '&modop=custom&a=Dnssec' => 'DNSSEC',
+		],
+		'vars'         => [
+			'desc' => $desc,
+			'rmKey' => $rmKey,
+			'addKey' => $addKey,
+			'keys' => $keys,
+		],
+	];
+}
+
+/**
+ * Client Area Custom Button Array.
+ *
+ * Allows you to define additional actions your module supports.
+ * In this example, we register a Push Domain action which triggers
+ * the `gandi_push` function when invoked.
+ *
+ * @return array
+ */
 function gandi_ClientAreaCustomButtonArray() {
-	return array(
-		"Push Domain" => "push",
-	);
-	return array();
+	return [
+		'DNSSEC' => 'Dnssec',
+	];
 }
 
 /**
@@ -1176,7 +1232,9 @@ function gandi_ClientAreaCustomButtonArray() {
  * @return array
  */
 function gandi_ClientAreaAllowedFunctions() {
-	return array();
+	return [
+		'DNSSEC' => 'Dnssec',
+	];
 }
 
 
@@ -1207,7 +1265,7 @@ function gandi_ClientArea( $params ) {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->getDomainInfo( $domain );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-			throw new Exception( 'Information not available' );
+			throw new \Exception( 'Information not available' );
 		}
 		if ( is_array( $response->status ) ) {
 			if ( ! $response->can_tld_lock ) {

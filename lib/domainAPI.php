@@ -485,6 +485,40 @@ class domainAPI {
 		return json_decode( $response );
 	}
 
+	/*
+	*
+	* Get DNSSEC keys.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function setDNSSEC( $domain, $algorithm = 13, $type = 'zsk' ) {
+		$private_key = openssl_pkey_new(array(
+			"private_key_bits" => 1024,
+			"private_key_type" => OPENSSL_KEYTYPE_RSA,
+		));
+		$public_key_pem = openssl_pkey_get_details($private_key)['key'];
+		//$public_key = openssl_pkey_get_public($public_key_pem);
+		$public_key = str_replace( ["-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----", PHP_EOL ], '', $public_key_pem);
+		$url      = "{$this->endPoint}/domain/domains/{$domain}/dnskeys";
+		$params   = [
+			'keys' => [
+				[
+					'algorithm'  => $algorithm,
+					'public_key' => 'xZku/s1ecmDH7IReVSXpuvDfj5jQnPFBDR7Q1RnxsbD8w00mXzVJmsMcpPjjww0stYjCazuOTvZDaowCTseJ/Q==',//base64_encode( random_bytes( 1024 ) ),
+					'type'       => $type,
+				],
+			]
+		];
+
+		/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
+		$response = $this->sendOrGetCached( $url, 'PUT', $params );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+
+		return json_decode( $response );
+	}
+
 	private function sendOrGetCached( $url, $method = 'GET', $post = [], $timeout = 30 ) {
 		if ( 'GET' !== $method ) {
 			return $this->sendRequest( $url, $method, $post, $timeout );
