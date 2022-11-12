@@ -413,7 +413,7 @@ class domainAPI {
      * @return array
      *
      */
-	public function getLiveDnsInfo( string $domain ) {
+	public function getLiveDNSInfo( string $domain ) {
 		$url      = "{$this->endPoint}/domain/domains/{$domain}/livedns";
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
@@ -461,10 +461,26 @@ class domainAPI {
 	* @return array
 	*
 	*/
-	public function getTLDPrices( $action, $organization = '' ) {
+	public function getTLDPrices( $action ) {
 		$url      = "{$this->endPoint}/billing/price/domain?processes={$action}";
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $action, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Get DNSSEC keys.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function getDNSSEC( string $domain ) {
+		$url      = "{$this->endPoint}/domain/domains/{$domain}/dnskeys";
+		$response = $this->sendOrGetCached( $url, 'GET' );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
 		return json_decode( $response );
 	}
