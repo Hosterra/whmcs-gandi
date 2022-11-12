@@ -15,7 +15,7 @@ define( 'GANDI_LANG', [
 	'admin.termsplaceholder' => "Full url of your terms & conditions",
 	'admin.recordset' => "Types d‘enregistrements DNS",
 	'admin.recordset.standard' => "Standard - uniquement les types pris en charge par WHMCS",
-	'admin.secprev' => "Securité & confidentialité",
+	'admin.secprev' => "Securité, confidentialité & performance",
 	'admin.secprev.check' => "Afficher dans la page d‘aperçu du domaine",
 	'admin.recordset.extended' => "Étendu - Tous les types pris en charge par LiveDNS",
 	'admin.dns' => "DNS à utiliser",

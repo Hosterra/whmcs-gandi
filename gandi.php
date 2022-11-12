@@ -22,6 +22,7 @@ use WHMCS\Domains\DomainLookup\SearchResult;
 use WHMCS\Module\Registrar\Gandi\domainAPI;
 use WHMCS\Module\Registrar\Gandi\LiveDNS;
 use WHMCS\Module\Registrar\Gandi\ERRPolicy;
+use WHMCS\Module\Registrar\Gandi\DNSSEC;
 
 require_once dirname( __FILE__ ) . '/lib/LiveDNS.php';
 
@@ -1256,8 +1257,10 @@ function gandi_ClientArea( $params ) {
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
-	$idprotect = Lang::trans( 'gandi.infopanel.noinfo' );
+	$idprotect = Lang::trans( 'gandi.infopanel.idprotectyes' );
+	$lock      = Lang::trans( 'gandi.infopanel.noinfo' );
 	$dns       = Lang::trans( 'gandi.infopanel.noinfo' );
+	$sec       = Lang::trans( 'gandi.infopanel.noinfo' );
 	try {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->getDomainInfo( $domain );
@@ -1265,10 +1268,12 @@ function gandi_ClientArea( $params ) {
 			throw new Exception( 'Information not available' );
 		}
 		if ( is_array( $response->status ) ) {
-			if ( in_array( 'clientTransferProhibited', $response->status ) && $response->can_tld_lock ) {
-				$idprotect = Lang::trans( 'gandi.infopanel.idprotectyes' );
+			if ( ! $response->can_tld_lock ) {
+				$lock = Lang::trans( 'gandi.infopanel.locknono' );
+			} elseif ( in_array( 'clientTransferProhibited', $response->status ) ) {
+				$lock = Lang::trans( 'gandi.infopanel.lockyes' );
 			} else {
-				$idprotect = Lang::trans( 'gandi.infopanel.idprotectno' );
+				$lock = Lang::trans( 'gandi.infopanel.lockno' );
 			}
 		}
 		if ( is_array( $response->nameservers ) ) {
@@ -1281,14 +1286,27 @@ function gandi_ClientArea( $params ) {
 	} catch ( \Exception $e ) {
 
 	}
-
-	/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
-
+	$dnssec = new DNSSEC( $params['apiKey'], $params['organization'], $domain );
+	if ( $dnssec->isActivable() ) {
+		$sec = Lang::trans( 'gandi.infopanel.dnssecno' );
+		if ( $dnssec->isActivated() ) {
+			$sec = Lang::trans( 'gandi.infopanel.dnssecyes' );
+		}
+	} else {
+		$sec = Lang::trans( 'gandi.infopanel.dnssecnono' );
+	}
 	$output  = '<div class="panel panel-default">';
 	$output .= ' <div class="panel-heading"><h3 class="panel-title">' . Lang::trans( 'gandi.infopanel.secprev' ) . '</h3></div>';
 	$output .= ' <ul class="list-info list-info-50 list-info-bordered">';
 	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.infopanel.idprotect' ) . '</span><span class="list-info-text"><span>' . $idprotect . '</span></span></li>';
-	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.dns' ) . '</span><span class="list-info-text"><span>' . $dns . '</span></span></li>';
+	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.infopanel.lock' ) . '</span><span class="list-info-text"><span>' . $lock . '</span></span></li>';
+	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.infopanel.dnssec' ) . '</span><span class="list-info-text"><span>' . $sec . '</span></span></li>';
+	$output .= ' </ul>';
+	$output .= '</div>';
+	$output .= '<div class="panel panel-default">';
+	$output .= ' <div class="panel-heading"><h3 class="panel-title">' . Lang::trans( 'gandi.infopanel.perf' ) . '</h3></div>';
+	$output .= ' <ul class="list-info list-info-50 list-info-bordered">';
+	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.dns.name' ) . '</span><span class="list-info-text"><span>' . $dns . '</span></span></li>';
 	$output .= ' </ul>';
 	$output .= '</div>';
 	return $output;
