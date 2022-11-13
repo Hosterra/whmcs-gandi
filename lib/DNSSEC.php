@@ -8,15 +8,17 @@ class DNSSEC {
 	private $domain;
 	private $apiKey;
 	private $sharingId;
+	private $api;
 	private $keys = null;
 	private $isactivable = null;
 	private $isactivated = null;
 
 
 	public function __construct( $apiKey, $sharingId, $domain ) {
-		$this->apiKey = $apiKey;
+		$this->apiKey    = $apiKey;
 		$this->sharingId = $sharingId;
-		$this->domain = $domain;
+		$this->domain    = $domain;
+		$this->api       = new domainAPI( $this->apiKey, $this->sharingId );
 	}
 
 	/*
@@ -25,9 +27,8 @@ class DNSSEC {
 	*
 	*/
 	private function checkStatus() {
-		$api = new domainAPI( $this->apiKey, $this->sharingId );
 		try {
-			$response = $api->getLiveDNSInfo( $this->domain );
+			$response = $this->api->getLiveDNSInfo( $this->domain );
 			if ( ( isset( $response->code ) && 200 !== (int) $response->code ) ) {
 				throw new \Exception( 'Information not available' );
 			}
@@ -38,21 +39,33 @@ class DNSSEC {
 		} catch ( \Exception $e ) {
 			$this->isactivable = false;
 			$this->isactivated = false;
-			$this->keys = [];
+			$this->keys        = [];
 		}
 		if ( $this->isactivable ) {
 			try {
-				$response = $api->getDNSSEC( $this->domain );
+				$response = $this->api->getDNSSEC( $this->domain );
 				if ( isset( $response->code ) ) {
 					throw new \Exception( 'Information not available' );
 				}
-				$this->keys = (array) $response;
+				$this->keys        = (array) $response;
 				$this->isactivated = ( 0 < count( $this->keys ) );
 			} catch ( \Exception $e ) {
 				$this->isactivated = false;
-				$this->keys = [];
+				$this->keys        = [];
 			}
 		}
+	}
+
+	/*
+	*
+	* Reset status and invalidate cahce.
+	*
+	*/
+	public function reset() {
+		$this->api->invalidateCache( '/dnskeys' );
+		$this->keys        = null;
+		$this->isactivable = null;
+		$this->isactivated = null;
 	}
 
 	/*
@@ -66,6 +79,7 @@ class DNSSEC {
 		if ( ! isset( $this->keys ) ) {
 			$this->checkStatus();
 		}
+
 		return $this->keys;
 	}
 
@@ -80,6 +94,7 @@ class DNSSEC {
 		if ( ! isset( $this->isactivable ) ) {
 			$this->checkStatus();
 		}
+
 		return $this->isactivable;
 	}
 
@@ -94,27 +109,49 @@ class DNSSEC {
 		if ( ! isset( $this->isactivated ) ) {
 			$this->checkStatus();
 		}
+
 		return $this->isactivated;
 	}
 
 	/*
 	*
-	* Verify if DNSSEC is activated.
+	* Enable DNSSEC.
 	*
 	* @return boolean
 	*
 	*/
 	public function enable() {
-		$api = new domainAPI( $this->apiKey, $this->sharingId );
 		try {
-			$response = $api->setDNSSEC( $this->domain );
+			$response = $this->api->setDNSSEC( $this->domain );
 			if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 				throw new \Exception( 'Information not available' );
 			}
+
 			return true;
 		} catch ( \Exception $e ) {
 			return false;
 		}
+	}
+
+	/*
+	*
+	* Disable DNSSEC.
+	*
+	* @return boolean
+	*
+	*/
+	public function disable() {
+		foreach ( $this->getKeys() as $key ) {
+			if ( $key->id ) {
+				try {
+					$this->api->deleteDNSSEC( $this->domain, $key->id );
+				} catch ( \Exception $e ) {
+					return false;
+				}
+			}
+		}
+
+		return true;
 	}
 
 
