@@ -24,11 +24,12 @@ class domainAPI {
 			$cache       = self::$cache;
 			self::$cache = [];
 			foreach ( $cache as $k => $v ) {
-				if ( ! str_contains( $v, $scope ) ) {
+				if ( ! str_contains( $k, $scope ) ) {
 					self::$cache[ $k ] = $v;
 				}
 			}
 		}
+		logModuleCall( $this->registrar, __FUNCTION__, 'scope:' . $scope, 'done');
 	}
 
 	public function getDomainInfo( $domain, $associative = false ) {
@@ -111,6 +112,29 @@ class domainAPI {
 		}
 
 		return $result;
+	}
+
+	private function generatePublicKey( $length = 88, $suffix = '==' ) {
+		// Configuration settings for the key
+		$config = array(
+			"private_key_type" => OPENSSL_KEYTYPE_EC,
+			"curve_name" => "prime256v1"
+		);
+
+		// Create the private and public key
+		$res = openssl_pkey_new($config);
+
+		// Extract the private key into $private_key
+		openssl_pkey_export($res, $private_key);
+
+		// Extract the public key into $public_key
+		$public_key = openssl_pkey_get_details($res);
+		$public_key = str_replace( [PHP_EOL, '-----BEGIN PUBLIC KEY-----', '-----END PUBLIC KEY-----'], '', $public_key["key"]);
+		$public_key = base64_decode( $public_key );
+		$public_key = substr( $public_key, 1);
+		$public_key = base64_encode( $public_key );
+		return base64_encode(random_bytes(64));
+		return str_replace( [ '+', '/' ], [ 'P', 'L' ], substr( base64_encode( random_bytes( $length * 8 ) ), 0, $length - strlen( $suffix ) ) ) . $suffix;
 	}
 
 	private function generateOwner( $contacts, $additionalfields ) {
@@ -494,19 +518,12 @@ class domainAPI {
 	*
 	*/
 	public function setDNSSEC( $domain, $algorithm = 13, $type = 'zsk' ) {
-		$private_key = openssl_pkey_new(array(
-			"private_key_bits" => 1024,
-			"private_key_type" => OPENSSL_KEYTYPE_RSA,
-		));
-		$public_key_pem = openssl_pkey_get_details($private_key)['key'];
-		//$public_key = openssl_pkey_get_public($public_key_pem);
-		$public_key = str_replace( ["-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----", PHP_EOL ], '', $public_key_pem);
 		$url      = "{$this->endPoint}/domain/domains/{$domain}/dnskeys";
 		$params   = [
 			'keys' => [
 				[
 					'algorithm'  => $algorithm,
-					'public_key' => 'xZku/s1ecmDH7IReVSXpuvDfj5jQnPFBDR7Q1RnxsbD8w00mXzVJmsMcpPjjww0stYjCazuOTvZDaowCTseJ/Q==',//base64_encode( random_bytes( 1024 ) ),
+					'public_key' => $this->generatePublicKey(),
 					'type'       => $type,
 				],
 			]
@@ -514,6 +531,22 @@ class domainAPI {
 
 		/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
 		$response = $this->sendOrGetCached( $url, 'PUT', $params );
+		logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Delete a DNSSEC keys.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function deleteDNSSEC( $domain, $key_id ) {
+		$url      = "{$this->endPoint}/domain/domains/{$domain}/dnskeys/{$key_id}";
+		$response = $this->sendOrGetCached( $url, 'DELETE' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
 		return json_decode( $response );

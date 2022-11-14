@@ -10,11 +10,14 @@ define( 'GANDI_REGISTRAR_API_VERSION', '5' );
 define( 'GANDI_REGISTRAR_VERSION', '5.0.0' );
 define( 'GANDI_RESOURCE_DIR', dirname( __FILE__ ) . '/resources/' );
 define( 'GANDI_CONTACT_TYPES', [ 'individual', 'company', 'association', 'publicbody', 'reseller' ] );
+define( 'GANDI_CALL_LONG_WAIT', 10 );       // Gandi may take some times to process API calls, so let's wait before refreshing
+define( 'GANDI_CALL_SHORT_WAIT', 3 );       // Gandi may take some times to process API calls, so let's wait before refreshing
 
 
 use WHMCS\Carbon;
 use WHMCS\Domain\TopLevel\ImportItem;
 use WHMCS\Results\ResultsList;
+use WHMCS\Domain\Domain as iDomain;
 use WHMCS\Domain\Registrar\Domain;
 use WHMCS\Domains\DomainLookup\ResultsList as LookupResultsList;
 use WHMCS\Domains\DomainLookup\SearchResult;
@@ -235,7 +238,7 @@ function gandi_getConfigArray( $params ) {
 					'whmcs'   => Lang::Trans( 'gandiadmin.dns.whmcs' ),
 				],
 			],
-			'recordset'          => [
+			'recordset'    => [
 				'FriendlyName' => Lang::Trans( 'gandiadmin.recordset.name' ),
 				'Type'         => 'dropdown',
 				'Options'      => [
@@ -243,10 +246,10 @@ function gandi_getConfigArray( $params ) {
 					'extended' => Lang::Trans( 'gandiadmin.recordset.extended' ),
 				],
 			],
-			'secprev' => [
+			'secprev'      => [
 				'FriendlyName' => Lang::Trans( 'gandiadmin.secprev.name' ),
-				'Type' => 'yesno',
-				'Description' => Lang::Trans( 'gandiadmin.secprev.check' ),
+				'Type'         => 'yesno',
+				'Description'  => Lang::Trans( 'gandiadmin.secprev.check' ),
 			],
 			'version'      => [
 				'FriendlyName' => GANDI_REGISTRAR_PRODUCT_NAME . ' module v' . GANDI_REGISTRAR_VERSION,
@@ -436,6 +439,7 @@ function gandi_SaveContactDetails( $params ) {
 				'error' => json_encode( $response )
 			];
 		}
+
 		return [
 			'success' => 'success',
 		];
@@ -524,10 +528,19 @@ function gandi_SaveNameservers( $params ) {
 		} else {
 			$request = $api->updateDomainNameservers( $domain, $nameservers );
 		}
-		$api->invalidateCache( $domain . '/nameservers' );
 		if ( ( isset( $request->code ) && $request->code != 202 && $request->code != 409 ) || isset( $request->errors ) ) {
 			throw new \Exception( json_encode( $request ) );
 		}
+		$domain_def = iDomain::where( 'domain', $domain )->first();
+		if ( 'livedns' === $params['dns'] && LiveDNS::isCorrect( $nameservers ) ) {
+			$domain_def->hasDnsManagement = true;
+			$domain_def->save();
+		} else {
+			$domain_def->hasDnsManagement = false;
+			$domain_def->save();
+		}
+		$api->invalidateCache( $domain . '/nameservers' );
+		sleep( GANDI_CALL_LONG_WAIT );
 
 		return [
 			'success' => true,
@@ -602,7 +615,8 @@ function gandi_SaveRegistrarLock( $params ) {
 				'error' => json_encode( $response )
 			];
 		}
-		sleep(10);
+		sleep( GANDI_CALL_LONG_WAIT );
+
 		return [
 			'success' => 'success',
 		];
@@ -627,9 +641,9 @@ function gandi_SaveRegistrarLock( $params ) {
  *
  */
 function gandi_GetEPPCode( $params ) {
-	$sld        = $params['sld'];
-	$tld        = $params['tld'];
-	$domain     = $sld . '.' . $tld;
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
 	try {
 		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
 		$request = $api->getDomainInfo( $domain );
@@ -1159,25 +1173,50 @@ function gandi_RenewDomain( $params ) {
  * @return array
  */
 function gandi_Dnssec( $params ) {
-	/*highlight_string("<?php\n\$data =\n" . var_export(random_bytes(1024), true) . ";\n?>");die();*/
-	$sld                = $params['sld'];
-	$tld                = $params['tld'];
-	$domain             = $sld . '.' . $tld;
+	$sld    = $params['sld'];
+	$tld    = $params['tld'];
+	$domain = $sld . '.' . $tld;
 	$dnssec = new DNSSEC( $params['apiKey'], $params['organization'], $domain );
 	if ( filter_input( INPUT_POST, 'addKey' ) ) {
 		$dnssec->enable();
+		sleep( GANDI_CALL_LONG_WAIT );
+	}
+	if ( filter_input( INPUT_POST, 'rmKey' ) ) {
+		$dnssec->disable();
+		sleep( GANDI_CALL_LONG_WAIT );
 	}
 	$rmKey  = false;
 	$addKey = false;
 	$keys   = [];
+	$dnssec->reset();
 	if ( $dnssec->isActivable() ) {
 		$desc = Lang::trans( 'gandi.dnssec.nokey' );
 		if ( $dnssec->isActivated() ) {
-			$desc = Lang::trans( 'gandi.dnssec.yeskey' );
-			$rmKey  = true;
+			$desc  = Lang::trans( 'gandi.dnssec.yeskey' );
+			$rmKey = true;
 			foreach ( $dnssec->getKeys() as $key ) {
 				$keys[] = [
-					'id' => $key->id ?? '-',
+					'id'        => $key->id ?? '-',
+					'type'      => [
+						'name'  => Lang::trans( 'gandi.dnssec.type' ),
+						'value' => $key->type ?? 'unknown'
+					],
+					'algorithm' => [
+						'name'  => Lang::trans( 'gandi.dnssec.algorithm' ),
+						'value' => $key->algorithm ? ( 13 == $key->algorithm ? 'ECDSA Curve P-256 w/ SHA-256' : '-' ) : '-'
+					],
+					'digest' => [
+						'name'  => Lang::trans( 'gandi.dnssec.digest' ),
+						'value' => $key->digest ?? '-'
+					],
+					'public' => [
+						'name'  => Lang::trans( 'gandi.dnssec.public' ),
+						'value' => $key->public_key ?? '-'
+					],
+					'tag' => [
+						'name'  => Lang::trans( 'gandi.dnssec.tag' ),
+						'value' => $key->keytag ?? '-'
+					],
 				];
 			}
 		} else {
@@ -1187,23 +1226,17 @@ function gandi_Dnssec( $params ) {
 		$desc = Lang::trans( 'gandi.dnssec.nonokey' );
 	}
 
-
-
-
-
-
-
-
 	return [
 		'templatefile' => 'dnssec',
 		'breadcrumb'   => [
 			'clientarea.php?action=domaindetails&domainid=' . $params['domainid'] . '&modop=custom&a=Dnssec' => 'DNSSEC',
 		],
 		'vars'         => [
-			'desc' => $desc,
-			'rmKey' => $rmKey,
+			'desc'   => $desc,
+			'rmKey'  => $rmKey,
 			'addKey' => $addKey,
-			'keys' => $keys,
+			'keys'   => $keys,
+			'fields' => [ 'type', 'algorithm' ],
 		],
 	];
 }
@@ -1254,9 +1287,9 @@ function gandi_ClientArea( $params ) {
 	if ( ! $params['secprev'] || ( array_key_exists( 'registrar', $params ) && 'gandi' !== $params['registrar'] ) ) {
 		return '';
 	}
-	$sld    = $params['sld'];
-	$tld    = $params['tld'];
-	$domain = $sld . '.' . $tld;
+	$sld       = $params['sld'];
+	$tld       = $params['tld'];
+	$domain    = $sld . '.' . $tld;
 	$idprotect = Lang::trans( 'gandi.infopanel.idprotectyes' );
 	$lock      = Lang::trans( 'gandi.infopanel.noinfo' );
 	$dns       = Lang::trans( 'gandi.infopanel.noinfo' );
@@ -1295,7 +1328,7 @@ function gandi_ClientArea( $params ) {
 	} else {
 		$sec = Lang::trans( 'gandi.infopanel.dnssecnono' );
 	}
-	$output  = '<div class="panel panel-default">';
+	$output = '<div class="panel panel-default">';
 	$output .= ' <div class="panel-heading"><h3 class="panel-title">' . Lang::trans( 'gandi.infopanel.secprev' ) . '</h3></div>';
 	$output .= ' <ul class="list-info list-info-50 list-info-bordered">';
 	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.infopanel.idprotect' ) . '</span><span class="list-info-text"><span>' . $idprotect . '</span></span></li>';
@@ -1309,6 +1342,7 @@ function gandi_ClientArea( $params ) {
 	$output .= '  <li><span class="list-info-title">' . Lang::trans( 'gandi.dns.name' ) . '</span><span class="list-info-text"><span>' . $dns . '</span></span></li>';
 	$output .= ' </ul>';
 	$output .= '</div>';
+
 	return $output;
 }
 
