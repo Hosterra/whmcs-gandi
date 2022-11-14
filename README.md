@@ -19,6 +19,7 @@ Use Gandi.net as registrar in WHMCS.
 - WHOIS privacy protection: **_supported_** (see following note about ID Protect)
 - Domain delete operations: **_not supported_**
 - Domain release operations: **_not supported_**
+- Vanity name servers: **_not supported_**
 
 > 💡️️ The WHMCS IDProtect operations are not implemented in this module: by default, all anonymization options are enforced to `true` for TLDs supporting it, whatever is specified for each individual TLD. There is no reason why privacy should be optional!
 
