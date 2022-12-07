@@ -362,7 +362,7 @@ class domainAPI {
 			'bill'  => $billing,
 			'tech'  => $tech
 		];
-		$response                 = $this->sendRequest( $url, 'PATCH', $params );
+		$response                 = $this->sendOrGetCached( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, [ $domain, $params ], $response );
 
 		return json_decode( $response );

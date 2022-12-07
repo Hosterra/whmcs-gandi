@@ -424,6 +424,7 @@ function gandi_GetContactDetails( $params ) {
  *
  */
 function gandi_SaveContactDetails( $params ) {
+	highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -435,6 +436,7 @@ function gandi_SaveContactDetails( $params ) {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->updateDomainContacts( $domain, $contacts );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			logModuleCall( 'gandi registrar', __FUNCTION__, $contacts, json_encode( $response ) );
 			return [
 				'error' => json_encode( $response )
 			];
@@ -444,6 +446,7 @@ function gandi_SaveContactDetails( $params ) {
 			'success' => 'success',
 		];
 	} catch ( \Exception $e ) {
+		logModuleCall( 'gandi registrar', __FUNCTION__, $contacts, $e->getMessage() );
 		return [
 			'error' => $e->getMessage(),
 		];
