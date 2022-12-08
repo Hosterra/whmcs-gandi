@@ -8,7 +8,7 @@ class LiveDNS {
 
 	public static function isCorrect ( $nameservers ) {
 		foreach ( $nameservers as $v ) {
-			if ( ( '' !== $v ) && ( ! str_starts_with( $v, 'ns-' ) || ! str_ends_with( $v, '.gandi.net' ) ) ) {
+			if ( ( '' !== $v ) && ( ! str_ends_with( $v, '.gandi.net' ) ) ) {
 				return false;
 			}
 		}

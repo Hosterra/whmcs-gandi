@@ -32,7 +32,7 @@ Use Gandi.net as registrar in WHMCS.
 
 ## How to configure
 
-> 💡️️ Gandi Registrar for WHMCS allows you to delegate your DNS handling to Gandi LiveDNS. To do so, you have to select "Gandi LiveDNS" in this module settings and have empty default name servers in WHMCS main domains config. 
+> 💡️️ Gandi Registrar for WHMCS allows you to delegate your DNS handling to Gandi LiveDNS. To do so, you have to select "Gandi LiveDNS" in this module settings and have `livedns.gandi.net` as default name servers in WHMCS main domains config. Note `livedns.gandi.net` is not an existing host, it's just the easiest way to fill some gaps in the WHMCS APIs.
 
 ## Uncovered TLDs
 All [TLDs managed by Gandi](https://www.gandi.net/en/domain/tld) are registrable except the following:
