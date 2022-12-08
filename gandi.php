@@ -146,21 +146,29 @@ function gandi_NormalizeContactInput( $contact ) {
 	$items = [];
 	foreach (
 		[
-			'type',
-			'orgname',
-			'given',
-			'family',
-			'email',
-			'Phone',
-			'streetaddr',
-			'city',
-			'zip',
-			'country'
-		] as $key
+			'type' => [],
+			'orgname' => ['Organisation Name','Company Name'],
+			'given' => ['First Name'],
+			'family' => ['Last Name'],
+			'email' => ['Email', 'Email Address'],
+			'Phone' => ['Phone Number'],
+			'streetaddr' => ['Address', 'Address 1'],
+			'city' => ['City'],
+			'zip' => ['Postcode', 'ZIP', 'ZIP Code'],
+			'country' => ['Country']
+		] as $key => $subst
 	) {
 		$items[ strtolower( $key ) ] = $contact[ $key ] ?? '';
+		if ( '' === $items[ strtolower( $key ) ] ) {
+			foreach ( $subst as $try ) {
+				if ( array_key_exists( $try, $contact ) && '' !== $contact[$try] ) {
+					$items[ strtolower( $key ) ] = $contact[$try];
+					break;
+				}
+			}
 	}
-	if ( array_key_exists( 'orgname', $items ) && '' === $items['orgname'] ) {
+	}
+	if ( '' === $items['orgname'] ) {
 		$items['type'] = 'individual';
 	}
 
@@ -410,7 +418,6 @@ function gandi_GetContactDetails( $params ) {
  *
  */
 function gandi_SaveContactDetails(array $params) {
-	highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -422,17 +429,17 @@ function gandi_SaveContactDetails(array $params) {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->updateDomainContacts( $domain, $contacts );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-			logModuleCall( 'gandi registrar', __FUNCTION__, $contacts, json_encode( $response ) );
 			return [
 				'error' => json_encode( $response )
 			];
 		}
+		$api->invalidateCache( $domain . '/contacts' );
+		sleep( GANDI_CALL_LONG_WAIT );
 
 		return [
 			'success' => 'success',
 		];
 	} catch ( \Exception $e ) {
-		logModuleCall( 'gandi registrar', __FUNCTION__, $contacts, $e->getMessage() );
 		return [
 			'error' => $e->getMessage(),
 		];
