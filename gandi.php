@@ -103,24 +103,8 @@ function gandi_GetTLDs( $params, $action ) {
  * @return array
  */
 function gandi_NormalizeContactOutput( $contact ) {
-	/*if ( array_key_exists( 'extra_parameters', $contact ) ) {
-		unset( $contact['extra_parameters'] );
-	}
-	if ( array_key_exists( 'data_obfuscated', $contact ) ) {
-		unset( $contact['data_obfuscated'] );
-	}
-	if ( array_key_exists( 'mail_obfuscated', $contact ) ) {
-		unset( $contact['mail_obfuscated'] );
-	}
-	if ( array_key_exists( 'same_as_owner', $contact ) ) {
-		unset( $contact['same_as_owner'] );
-	}
 	if ( array_key_exists( 'phone', $contact ) ) {
-		//$contact['phone'] = '+' . preg_replace( "/[^0-9]/", "", $contact['phone'] );
-		$contact['fax'] = $contact['phone'];
-	}*/
-	if ( ! array_key_exists( 'orgname', $contact ) ) {
-		$contact['orgname'] = '';
+		$contact['Phone'] = $contact['phone'];
 	}
 	if ( array_key_exists( 'type', $contact ) ) {
 		if ( is_int( $contact['type'] ) && $contact['type'] < count( GANDI_CONTACT_TYPES ) ) {
@@ -132,71 +116,23 @@ function gandi_NormalizeContactOutput( $contact ) {
 	if ( ! in_array( $contact['type'], GANDI_CONTACT_TYPES ) ) {
 		$contact['type'] = GANDI_CONTACT_TYPES[0];
 	}
-
-
 	$sortedContact = [];
-	/*$sortedContact['First Name'] = "First Name";
-	$sortedContact['Last Name'] = "Last Name";
-	$sortedContact['Full Name'] = "Full Name";
-	$sortedContact['Contact Name'] = "Contact Name";
-	$sortedContact['Email'] = "Email";
-	$sortedContact['Email Address'] = "Email Address";
-	$sortedContact['Job Title'] = "Job Title";
-	$sortedContact['Company Name'] = "Company Name";
-	$sortedContact['Organisation Name'] = "Organisation Name";
-	$sortedContact['Address'] = "Address";
-	$sortedContact['Street'] = "Street";
-	$sortedContact['Address 1'] = "Address 1";
-	$sortedContact['Address 2'] = "Address 2";
-	$sortedContact['Address 3'] = "Address 3";
-	$sortedContact['City'] = "City";
-	$sortedContact['State'] = "State";
-	$sortedContact['County'] = "County";
-	$sortedContact['Region'] = "Region";
-	$sortedContact['Postcode'] = "Postcode";
-	$sortedContact['ZIP Code'] = "ZIP Code";
-	$sortedContact['ZIP'] = "ZIP";
-	$sortedContact['Country'] = "Country";
-	$sortedContact['Phone'] = "Phone";
-	$sortedContact['Phone Number'] = "Phone Number";
-	$sortedContact['Fax'] = "Fax";
-	$sortedContact['Phone Country Code'] = "0";*/
-
-	$map = [
-		'firstname' => 'First Name',
-		'lastname' => 'Last Name',
-		'address1' => 'Address 1',
-		'address2' => 'Address 2',
-		'address3' => 'Address 3',
-		'organisation' => 'Organisation',
-		'suburb' => 'City',
-		'state' => 'State',
-		'country' => 'Country',
-		'postcode' => 'Postcode',
-		'phone' => 'Phone',
-		'email' => 'Email',
-	];
-
-
 	foreach (
 		[
-			'type' => 'Address 2',
-			'orgname' => 'Organisation',
-			'given' => 'First Name',
-			'family' => 'Last Name',
-			'email' => 'Email',
-			'phone' => 'Phone',
-			'streetaddr' => 'Address 1',
-			'city' => 'City',
-			'zip' => 'Postcode',
-			'state' => 'state',
-			'country' => 'Country'
-		] as $key => $field
+			'type',
+			'orgname',
+			'given',
+			'family',
+			'email',
+			'Phone',
+			'streetaddr',
+			'city',
+			'zip',
+			'country'
+		] as $key
 	) {
-		$sortedContact[ $field ] = $contact[ $key ] ?? 'Nord';
+		$sortedContact[ $key ] = $contact[ $key ] ?? '';
 	}
-
-	//$sortedContact['Address 3'] = 'zsdwfxc';
 
 	return $sortedContact;
 }
@@ -427,61 +363,6 @@ function gandi_GetTldPricing( $params ) {
 }
 
 /**
- * Enable or Disables ID Protection.
- *
- * @param array $params
- *
- * @return array
- */
-function lgandi_IDProtectToggle(array $params)
-{
-
-	return [];
-}
-
-function agandi_GetDomainInformation($params) {
-	/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
-
-	return (new WHMCS\Domain\Registrar\Domain())
-		->setDomain('hosterra.info')
-		->setNameservers(['livedns.gandi.net'])
-		->setTransferLock(false)
-		//->setExpiryDate(Carbon::createFromFormat('Y-m-d', '2023-12-31'))
-		->setIdProtectionStatus(false)
-		->setRegistrationStatus(constant('\WHMCS\Domain\Registrar\Domain::STATUS_ACTIVE'))
-		->setIrtpVerificationTriggerFields([]);
-		;
-
-	return (new Domain)
-		->setDomain('hosterra.info')
-		//->setNameservers($response['nameservers'])
-		->setRegistrationStatus('active')
-		->setTransferLock(false)
-		->setTransferLockExpiryDate(null)
-		->setExpiryDate(Carbon::createFromFormat('Y-m-d', '2023-12-31')) // $response['expirydate'] = YYYY-MM-DD
-		->setRestorable(false)
-		->setIdProtectionStatus(false)
-		->setDnsManagementStatus(true)
-		->setEmailForwardingStatus(true)
-		->setIsIrtpEnabled(false)
-		->setIrtpOptOutStatus(true)
-		->setIrtpTransferLock(false)
-		//->IrtpTransferLockExpiryDate(null)
-		->setDomainContactChangePending(false)
-		->setPendingSuspension(false)
-		->setDomainContactChangeExpiryDate(null)
-		->setRegistrantEmailAddress('pierre.lannoy@gmail.com')
-		->setIrtpVerificationTriggerFields(
-			[
-				'Registrant' => [
-					'First Name',
-					'Last Name',
-				],
-			]
-		);
-}
-
-/**
  * Get the current WHOIS Contact Information.
  *
  * Should return a multi-level array of the contacts and name/address
@@ -503,8 +384,8 @@ function gandi_GetContactDetails( $params ) {
 		$contacts = $api->getDomainContacts( $domain );
 
 		return [
-			'Registrant' => gandi_NormalizeContactOutput( (array) $contacts->owner ),
-			'Tech'  => gandi_NormalizeContactOutput( (array) $contacts->tech ),
+			'Owner'      => gandi_NormalizeContactOutput( (array) $contacts->owner ),
+			'Technical'  => gandi_NormalizeContactOutput( (array) $contacts->tech ),
 			'Billing'    => gandi_NormalizeContactOutput( (array) $contacts->bill ),
 			'Admin'      => gandi_NormalizeContactOutput( (array) $contacts->admin ),
 		];
@@ -1476,7 +1357,7 @@ add_hook( 'ClientAreaPageDomainContacts', 1, function ( $vars ) {
 		$contactdetailstranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
 	}
 	$contacttypestranslations = [];
-	foreach ( [ 'registrant', 'technical', 'admin', 'billing' ] as $key ) {
+	foreach ( [ 'owner', 'technical', 'admin', 'billing' ] as $key ) {
 		$contacttypestranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
 	}
 	$entitytranslations = [];
