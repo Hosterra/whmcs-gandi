@@ -469,7 +469,7 @@ function gandi_GetNameservers( $params ) {
 				'success' => false
 			];
 		}
-		$response = [ 'livedns.gandi.net' ];
+		$response = [ 'ns1' => 'livedns.gandi.net' ];
 		if ( 'livedns' !== $params['dns'] || ! LiveDNS::isCorrect( $request ) ) {
 			foreach ( $request as $k => $v ) {
 				$index                     = $k + 1;
@@ -508,15 +508,12 @@ function gandi_SaveNameservers( $params ) {
 	if ( $params['ns2'] ) {
 		$nameservers[] = $params['ns2'];
 	}
-	if ( $params['ns3'] ) {
-		$nameservers[] = $params['ns3'];
+	foreach ( $nameservers as $k => $v ) {
+		if ( LiveDNS::isCorrect( [$v] ) ) {
+			unset( $nameservers[$k]);
+		}
 	}
-	if ( $params['ns4'] ) {
-		$nameservers[] = $params['ns4'];
-	}
-	if ( $params['ns5'] ) {
-		$nameservers[] = $params['ns5'];
-	}
+	$nameservers = array_filter( $nameservers );
 	try {
 		$api = new domainAPI( $params['apiKey'], $params['organization'] );
 		if ( 'livedns' === $params['dns'] && LiveDNS::isCorrect( $nameservers ) ) {
@@ -1191,11 +1188,15 @@ function gandi_Dnssec( $params ) {
 			$desc  = Lang::trans( 'gandi.dnssec.yeskey' );
 			$rmKey = true;
 			foreach ( $dnssec->getKeys() as $key ) {
+				$digest = $key->ds ?? '-';
+				while ( 0 < strpos( $digest, ' ' ) ) {
+					$digest = substr( $digest, strpos( $digest, ' ' ) + 1 );
+				}
 				$keys[] = [
 					'id'        => $key->id ?? '-',
 					'type'      => [
 						'name'  => Lang::trans( 'gandi.dnssec.type' ),
-						'value' => $key->type ?? 'unknown'
+						'value' => ( 257 == $key->type ? 'ksk' : 'zsk' )
 					],
 					'algorithm' => [
 						'name'  => Lang::trans( 'gandi.dnssec.algorithm' ),
@@ -1203,15 +1204,11 @@ function gandi_Dnssec( $params ) {
 					],
 					'digest' => [
 						'name'  => Lang::trans( 'gandi.dnssec.digest' ),
-						'value' => $key->digest ?? '-'
+						'value' => $digest
 					],
 					'public' => [
 						'name'  => Lang::trans( 'gandi.dnssec.public' ),
 						'value' => $key->public_key ?? '-'
-					],
-					'tag' => [
-						'name'  => Lang::trans( 'gandi.dnssec.tag' ),
-						'value' => $key->keytag ?? '-'
 					],
 				];
 			}

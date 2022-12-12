@@ -30,7 +30,7 @@ class LiveDNS {
 	public function getLiveDnsRecords( string $domain ) {
 		$url      = $this::ENDPOINT . "/domains/{$domain}/records";
 		$response = $this->sendRequest( $url, "GET" );
-		logModuleCall( 'Gandi Registrar', 'LiveDNS records', $domain, $response );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $domain, $response );
 
 		return json_decode( $response );
 	}
@@ -47,7 +47,7 @@ class LiveDNS {
 	public function deleteRecord( string $domain, $record ) {
 		$url      = $this::ENDPOINT . "/domains/{$domain}/records/{$record->rrset_name}/{$record->rrset_type}";
 		$response = $this->sendRequest( $url, "DELETE" );
-		logModuleCall( 'Gandi Registrar', 'LiveDNS delete record', [ $domain, $record ], $response );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, [ $domain, $record ], $response );
 
 		return json_decode( $response );
 	}
@@ -76,7 +76,77 @@ class LiveDNS {
 			$params['rrset_values'] = [ $record['address'] ];
 		}
 		$response = $this->sendRequest( $url, "POST", $params );
-		logModuleCall( 'Gandi Registrar', 'LiveDNS add record', [ $domain, $params ], $response );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, [ $domain, $params ], $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Get DNSSEC keys.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function getDnssecKeys( string $domain ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/keys";
+		$response = $this->sendRequest( $url, "GET" );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $domain, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Get DNSSEC key details.
+	*
+	* @param string $domain
+	* @param string $key
+	* @return array
+	*
+	*/
+	public function getDnssecKeyDetails( string $domain, $key ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/keys/{$key}";
+		$response = $this->sendRequest( $url, "GET" );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $domain, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Delete DNSSEC key.
+	*
+	* @param string $domain
+	* @param string $key
+	* @return array
+	*
+	*/
+	public function deleteDnssecKey( string $domain, $key ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/keys/{$key}";
+		$response = $this->sendRequest( $url, "DELETE" );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $domain, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Adds a DNSSEC key.
+	*
+	* @param string $domain
+	* @param int $type / Key flags (ZSK=256, KSK=257)
+	* @return array
+	*
+	*/
+	public function addDnssecKey( string $domain, $type ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/keys";
+		$params = [
+			'flags'   => $type
+		];
+		$response = $this->sendRequest( $url, "POST", $params );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, [ $domain, $params ], $response );
 
 		return json_decode( $response );
 	}

@@ -114,29 +114,6 @@ class domainAPI {
 		return $result;
 	}
 
-	private function generatePublicKey( $length = 88, $suffix = '==' ) {
-		// Configuration settings for the key
-		$config = array(
-			"private_key_type" => OPENSSL_KEYTYPE_EC,
-			"curve_name" => "prime256v1"
-		);
-
-		// Create the private and public key
-		$res = openssl_pkey_new($config);
-
-		// Extract the private key into $private_key
-		openssl_pkey_export($res, $private_key);
-
-		// Extract the public key into $public_key
-		$public_key = openssl_pkey_get_details($res);
-		$public_key = str_replace( [PHP_EOL, '-----BEGIN PUBLIC KEY-----', '-----END PUBLIC KEY-----'], '', $public_key["key"]);
-		$public_key = base64_decode( $public_key );
-		$public_key = substr( $public_key, 1);
-		$public_key = base64_encode( $public_key );
-		return base64_encode(random_bytes(64));
-		return str_replace( [ '+', '/' ], [ 'P', 'L' ], substr( base64_encode( random_bytes( $length * 8 ) ), 0, $length - strlen( $suffix ) ) ) . $suffix;
-	}
-
 	private function generateOwner( $contacts, $additionalfields ) {
 		$languages_mapping = [
 			'english'  => 'en',
@@ -520,19 +497,17 @@ class domainAPI {
 	* @return array
 	*
 	*/
-	public function setDNSSEC( $domain, $algorithm = 13, $type = 'zsk' ) {
+	public function setDNSSEC( $domain, $pkey, $algorithm = 13, $type = 'zsk' ) {
 		$url      = "{$this->endPoint}/domain/domains/{$domain}/dnskeys";
 		$params   = [
 			'keys' => [
 				[
 					'algorithm'  => $algorithm,
-					'public_key' => $this->generatePublicKey(),
+					'public_key' => $pkey,
 					'type'       => $type,
 				],
 			]
 		];
-
-		/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
 		$response = $this->sendOrGetCached( $url, 'PUT', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
 

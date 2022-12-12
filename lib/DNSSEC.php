@@ -3,22 +3,25 @@
 namespace WHMCS\Module\Registrar\Gandi;
 
 use WHMCS\Module\Registrar\Gandi\domainAPI;
+use WHMCS\Module\Registrar\Gandi\LiveDNS;
 
 class DNSSEC {
 	private $domain;
 	private $apiKey;
 	private $sharingId;
-	private $api;
+	private $domainApi;
+	private $livednsApi;
 	private $keys = null;
 	private $isactivable = null;
 	private $isactivated = null;
 
 
 	public function __construct( $apiKey, $sharingId, $domain ) {
-		$this->apiKey    = $apiKey;
-		$this->sharingId = $sharingId;
-		$this->domain    = $domain;
-		$this->api       = new domainAPI( $this->apiKey, $this->sharingId );
+		$this->apiKey     = $apiKey;
+		$this->sharingId  = $sharingId;
+		$this->domain     = $domain;
+		$this->domainApi  = new domainAPI( $this->apiKey, $this->sharingId );
+		$this->livednsApi = new LiveDNS( $this->apiKey );
 	}
 
 	/*
@@ -28,7 +31,7 @@ class DNSSEC {
 	*/
 	private function checkStatus() {
 		try {
-			$response = $this->api->getLiveDNSInfo( $this->domain );
+			$response = $this->domainApi->getLiveDNSInfo( $this->domain );
 			if ( ( isset( $response->code ) && 200 !== (int) $response->code ) ) {
 				throw new \Exception( 'Information not available' );
 			}
@@ -43,11 +46,20 @@ class DNSSEC {
 		}
 		if ( $this->isactivable ) {
 			try {
-				$response = $this->api->getDNSSEC( $this->domain );
-				if ( isset( $response->code ) ) {
+				$response = $this->livednsApi->getDnssecKeys( $this->domain );
+				if ( isset( $response->code ) && 200 !== (int) $response->code ) {
 					throw new \Exception( 'Information not available' );
 				}
-				$this->keys        = (array) $response;
+				$this->keys = [];
+				foreach ( (array) $response as $key ) {
+					if ( 'active' === (string) $key->status ) {
+						$dnskey = $this->livednsApi->getDnssecKeyDetails( $this->domain, $key->id );
+						if ( ( isset( $dnskey->code ) && 200 !== (int) $dnskey->code ) || isset( $dnskey->errors ) ) {
+							continue;
+						}
+						$this->keys[] = $dnskey ;
+					}
+				}
 				$this->isactivated = ( 0 < count( $this->keys ) );
 			} catch ( \Exception $e ) {
 				$this->isactivated = false;
@@ -58,11 +70,11 @@ class DNSSEC {
 
 	/*
 	*
-	* Reset status and invalidate cahce.
+	* Reset status and invalidate cache.
 	*
 	*/
 	public function reset() {
-		$this->api->invalidateCache( '/dnskeys' );
+		$this->domainApi->invalidateCache( '/dnskeys' );
 		$this->keys        = null;
 		$this->isactivable = null;
 		$this->isactivated = null;
@@ -122,12 +134,23 @@ class DNSSEC {
 	*/
 	public function enable() {
 		try {
-			$response = $this->api->setDNSSEC( $this->domain );
-			if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-				throw new \Exception( 'Information not available' );
+			$this->disable();
+			$response = $this->livednsApi->addDnssecKey( $this->domain, 257 );
+			if ( ( isset( $response->code ) && 201 !== (int) $response->code ) || isset( $response->errors ) ) {
+				throw new \Exception( 'Error while adding DNSSEC key.' );
 			}
-
-			return true;
+			sleep( GANDI_CALL_LONG_WAIT );
+			foreach ( (array) $this->getKeys() as $key ) {
+				if ( $key->id ) {
+					try {
+						$this->domainApi->setDNSSEC( $this->domain, $key->public_key, $key->algorithm, ( 257 == $key->flags ? 'ksk' : 'zsk' ) );
+					} catch ( \Exception $e ) {
+						return false;
+					}
+					return true;
+				}
+			}
+			return false;
 		} catch ( \Exception $e ) {
 			return false;
 		}
@@ -144,7 +167,7 @@ class DNSSEC {
 		foreach ( $this->getKeys() as $key ) {
 			if ( $key->id ) {
 				try {
-					$this->api->deleteDNSSEC( $this->domain, $key->id );
+					$this->livednsApi->deleteDnssecKey( $this->domain, $key->id );
 				} catch ( \Exception $e ) {
 					return false;
 				}

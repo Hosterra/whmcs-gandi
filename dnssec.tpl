@@ -10,7 +10,7 @@
                 <input type="hidden" name="domainid" value="{$domainid}" />
                 <input type="hidden" name="modop" value="custom" />
                 <input type="hidden" name="a" value="Dnssec" />
-                <input type="submit" name="addKey" value="{$LANG.gandi.dnssec.enable}"/>
+                <input type="submit" name="addKey" value="{$LANG.gandi.dnssec.enable}" class="btn btn-primary need-load"/>
             </form>
         </div>
     {/if}
@@ -24,7 +24,6 @@
                         <li><span class="list-info-title">{$key.algorithm.name}</span><span class="list-info-text"><span>{$key.algorithm.value}</span></span></li>
                         <li><span class="list-info-title">{$key.digest.name}</span><span class="list-info-text"><span><code>{$key.digest.value}</code></span></span></li>
                         <li><span class="list-info-title">{$key.public.name}</span><span class="list-info-text"><span><code>{$key.public.value}</code></span></span></li>
-                        <li><span class="list-info-title">{$key.tag.name}</span><span class="list-info-text"><span>{$key.tag.value}</span></span></li>
                     </ul>
                 </div>
             {/foreach}
@@ -33,8 +32,39 @@
                 <input type="hidden" name="domainid" value="{$domainid}" />
                 <input type="hidden" name="modop" value="custom" />
                 <input type="hidden" name="a" value="Dnssec" />
-                <input type="submit" name="rmKey" value="{$LANG.gandi.dnssec.disable}"/>
+                <input type="submit" name="rmKey" value="{$LANG.gandi.dnssec.disable}" class="btn btn-primary need-load"/>
             </form>
         </div>
     {/if}
+    <div class="modal whmcs-modal fade" id="modalSpinner" role="dialog" tabindex="-1" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="loader-txt">
+                        <p>{$LANG.gandi.spinnertmessage}</p>
+                    </div>
+                    <div class="loader">
+                        <div class="spinner" style="justify-content: center !important;">
+                            <div class="rect1"></div>
+                            <div class="rect2"></div>
+                            <div class="rect3"></div>
+                            <div class="rect4"></div>
+                            <div class="rect5"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            $(document).ready(function() {
+                $(".need-load").on("click", function(e) {
+                    $("#modalSpinner").modal({
+                        backdrop: "static",
+                        keyboard: false,
+                        show: true
+                    });
+                });
+            });
+        </script>
+    </div>
 </div>
