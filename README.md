@@ -2,7 +2,7 @@
 
 Use Gandi.net as registrar in WHMCS.
 
-![PHP 8.x Compatibility](https://img.shields.io/badge/PHP-8.x-7c86b4?style=flat-square) ![WHCMS 8.5.x Compatibility](https://img.shields.io/badge/WHMCS-8.5.x-96be4f?style=flat-square)
+![PHP 8.x Compatibility](https://img.shields.io/badge/PHP-8.x-7c86b4?style=flat-square) ![WHCMS 8.6.x Compatibility](https://img.shields.io/badge/WHMCS-8.6.x-96be4f?style=flat-square)
 
 ## Features
 - TLD prices import: **_supported_**
@@ -13,7 +13,7 @@ Use Gandi.net as registrar in WHMCS.
 - Domain transfer protection (lock/unlock): **_supported_**
 - Domain EPP management: **_supported_**
 - Name servers management: **_supported_**
-- DNNSEC operations: **_supported_**
+- DNNSEC operations: **_supported_** (only zsk)
 - DNS records creation, update and deletion: **_supported_**
 - DNS ttl management: **_supported_** (needs template customization)
 - Extended DNS record types: **_supported_** (needs template customization)
