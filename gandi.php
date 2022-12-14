@@ -25,6 +25,7 @@ use WHMCS\Module\Registrar\Gandi\domainAPI;
 use WHMCS\Module\Registrar\Gandi\LiveDNS;
 use WHMCS\Module\Registrar\Gandi\ERRPolicy;
 use WHMCS\Module\Registrar\Gandi\DNSSEC;
+use WHMCS\Module\Registrar\Gandi\dnsSnaphot;
 
 require_once dirname( __FILE__ ) . '/lib/LiveDNS.php';
 
@@ -176,6 +177,52 @@ function gandi_NormalizeContactInput( $contact ) {
 }
 
 /**
+ * Modify contacts fields and translations before rendering forms
+ *
+ * @return array
+ */
+function gandi_ModifyContacts( $vars ) {
+	$contactdetailstranslations = [];
+	foreach (
+		[
+			'type',
+			'orgname',
+			'given',
+			'family',
+			'email',
+			'Phone',
+			'streetaddr',
+			'city',
+			'zip',
+			'country'
+		] as $key
+	) {
+		$contactdetailstranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
+	}
+	$contacttypestranslations = [];
+	foreach ( [ 'owner', 'technical', 'admin', 'billing' ] as $key ) {
+		$contacttypestranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
+	}
+	$entitytranslations = [];
+	foreach ( [ 'individual', 'company', 'association', 'publicbody' ] as $key ) {
+		$entitytranslations[ $key ] = Lang::Trans( 'gandiadmin.entity.' . $key );
+	}
+	$filename = GANDI_RESOURCE_DIR . 'countries/countrycodes.php';
+	if ( file_exists( $filename ) ) {
+		include $filename;
+	} else {
+		$country_list = [];
+	}
+
+	return [
+		'contactdetailstranslations' => $contactdetailstranslations,
+		'contacttypestranslations'   => $contacttypestranslations,
+		'entitytranslations'         => $entitytranslations,
+		'countrylist'                => $country_list,
+	];
+}
+
+/**
  * Define registrar configuration options.
  *
  * The values you return here define what configuration options
@@ -239,6 +286,16 @@ function gandi_getConfigArray( $params ) {
 					'extended' => Lang::Trans( 'gandiadmin.recordset.extended' ),
 				],
 			],
+			/*'dnssec'      => [
+				'FriendlyName' => Lang::Trans( 'gandiadmin.dnssec.name' ),
+				'Type'         => 'yesno',
+				'Description'  => Lang::Trans( 'gandiadmin.dnssec.check' ),
+			],
+			'snapshot'      => [
+				'FriendlyName' => Lang::Trans( 'gandiadmin.snapshot.name' ),
+				'Type'         => 'yesno',
+				'Description'  => Lang::Trans( 'gandiadmin.snapshot.check' ),
+			],*/
 			'secprev'      => [
 				'FriendlyName' => Lang::Trans( 'gandiadmin.secprev.name' ),
 				'Type'         => 'yesno',
@@ -1243,9 +1300,94 @@ function gandi_Dnssec( $params ) {
  *
  * @return array
  */
+function gandi_Snapshot( $params ) {
+	$sld            = $params['sld'];
+	$tld            = $params['tld'];
+	$domain         = $sld . '.' . $tld;
+	$error          = null;
+	$success        = null;
+	$snaps          = [];
+	$details        = null;
+	$snapshots      = new dnsSnaphot( $params['apiKey'], $domain );
+	$sub = filter_input( INPUT_POST, 'sub' );
+	$id  = filter_input( INPUT_POST, 'snapid' );
+	if ( ! isset( $id ) ) {
+		$id  = filter_input( INPUT_GET, 'snapid' );
+	}
+	$ids = filter_input( INPUT_POST, 'domids' );
+	/*highlight_string("<?php\n\$data =\n" . var_export($ids, true) . ";\n?>");die();*/
+
+
+
+	$list = ! $snapshots->isValid( $id );
+	if ( $sub && 'addSnapshot' === $sub ) {
+		if ( $snapshots->takeNow( $id ) ) {
+			$success = Lang::trans( 'gandi.snapshot.createsuccess' );
+		} else {
+			$success = Lang::trans( 'gandi.snapshot.createerror' );
+		}
+		sleep( GANDI_CALL_SHORT_WAIT );
+		$list  = true;
+		$snaps = [];
+		foreach ( $snapshots->getList() as $snap ) {
+			$snap['statustext'] = Lang::trans( 'gandi.snapshot.' . $snap['statusClass'] );
+			$snaps[] = $snap;
+		}
+	} elseif ( $sub && 'deleteSnapshot' === $sub ) {
+
+	} elseif ( $sub && 'restoreSnapshot' === $sub ) {
+
+	} elseif ( $list ) {
+		$snaps = [];
+		foreach ( $snapshots->getList() as $snap ) {
+			$snap['statustext'] = Lang::trans( 'gandi.snapshot.' . $snap['statusClass'] );
+			$snaps[] = $snap;
+		}
+	} else {
+		$details = $snapshots->getDetails( $id );
+		$details['statustext'] = Lang::trans( 'gandi.snapshot.' . ( $details['status'] ?? 'error' ) );
+	}
+
+	return [
+		'templatefile' => 'snapshot',
+		'breadcrumb'   => [
+			'clientarea.php?action=domaindetails&domainid=' . $params['domainid'] . '&modop=custom&a=Snapshot' => 'Snapshot',
+		],
+		'vars'         => [
+			'domainid'       => $params['domainid'],
+			'list'           => $list,
+			'error'          => $error,
+			'success'        => $success,
+			'snapshots'      => $snaps,
+			'snapshot'       => $details,
+
+			'SnapshotsStatuses' => [
+				[
+					'statusClass' => 'auto',
+					'statustext'  => Lang::trans( 'gandi.snapshot.auto' ),
+				],
+				[
+					'statusClass' => 'manual',
+					'statustext'  => Lang::trans( 'gandi.snapshot.manual' ),
+				],
+			]
+		],
+	];
+}
+
+/**
+ * Client Area Custom Button Array.
+ *
+ * Allows you to define additional actions your module supports.
+ * In this example, we register a Push Domain action which triggers
+ * the `gandi_push` function when invoked.
+ *
+ * @return array
+ */
 function gandi_ClientAreaCustomButtonArray() {
 	return [
-		'DNSSEC' => 'Dnssec',
+		'snapshot' => 'Snapshot',
+		'DNSSEC'   => 'Dnssec',
 	];
 }
 
@@ -1257,9 +1399,10 @@ function gandi_ClientAreaCustomButtonArray() {
  *
  * @return array
  */
-function gandi_ClientAreaAllowedFunctions() {
+function agandi_ClientAreaAllowedFunctions() {
 	return [
-		'DNSSEC' => 'Dnssec',
+		'snapshot' => 'Snapshot',
+		'DNSSEC'   => 'Dnssec',
 	];
 }
 
@@ -1340,45 +1483,10 @@ function gandi_ClientArea( $params ) {
 }
 
 
+
+
 // HOOKS
 
-add_hook( 'ClientAreaPageDomainContacts', 1, function ( $vars ) {
-	$contactdetailstranslations = [];
-	foreach (
-		[
-			'type',
-			'orgname',
-			'given',
-			'family',
-			'email',
-			'Phone',
-			'streetaddr',
-			'city',
-			'zip',
-			'country'
-		] as $key
-	) {
-		$contactdetailstranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
-	}
-	$contacttypestranslations = [];
-	foreach ( [ 'owner', 'technical', 'admin', 'billing' ] as $key ) {
-		$contacttypestranslations[ $key ] = Lang::Trans( 'gandiadmin.contact.' . $key );
-	}
-	$entitytranslations = [];
-	foreach ( [ 'individual', 'company', 'association', 'publicbody' ] as $key ) {
-		$entitytranslations[ $key ] = Lang::Trans( 'gandiadmin.entity.' . $key );
-	}
-	$filename = GANDI_RESOURCE_DIR . 'countries/countrycodes.php';
-	if ( file_exists( $filename ) ) {
-		include $filename;
-	} else {
-		$country_list = [];
-	}
+add_hook( 'ClientAreaPageDomainContacts', 1,  'gandi_ModifyContacts' );
 
-	return [
-		'contactdetailstranslations' => $contactdetailstranslations,
-		'contacttypestranslations'   => $contacttypestranslations,
-		'entitytranslations'         => $entitytranslations,
-		'countrylist'                => $country_list,
-	];
-} );
+add_hook( 'ClientAreaPageBulkDomainManagement', 1,  'gandi_ModifyContacts' );

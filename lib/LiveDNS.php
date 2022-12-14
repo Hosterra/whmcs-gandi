@@ -153,6 +153,61 @@ class LiveDNS {
 
 	/*
 	*
+	* Get snapshots.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function getSnapshots( string $domain ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/snapshots";
+		$response = $this->sendRequest( $url, "GET" );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $domain, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Get snapshot details.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	public function getSnapshotDetails( string $domain, $id ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/snapshots/{$id}";
+		$response = $this->sendRequest( $url, "GET" );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, $domain, $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
+	* Create a snapshot
+	*
+	* @param string $domain
+	* @param int $type / Key flags (ZSK=256, KSK=257)
+	* @return array
+	*
+	*/
+	public function createSnapshot( string $domain, $name ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/snapshots";
+		$params = [];
+		if ( '' !== $name ) {
+			$params = [
+				'name'   => $name
+			];
+		}
+		$response = $this->sendRequest( $url, "POST", $params );
+		logModuleCall( 'Gandi Registrar', __FUNCTION__, [ $domain, $params ], $response );
+
+		return json_decode( $response );
+	}
+
+	/*
+	*
 	* Send request.
 	*
 	* @param string $url
