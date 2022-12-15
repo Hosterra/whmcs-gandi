@@ -29,23 +29,25 @@ class domainAPI {
 				}
 			}
 		}
-		logModuleCall( $this->registrar, __FUNCTION__, 'scope:' . $scope, 'done');
+		if ( GANDI_LOG_CACHE ) {
+			logModuleCall( $this->registrar, __FUNCTION__, 'scope: ' . $scope, 'done' );
+		}
 	}
 
-	public function getDomainInfo( $domain, $associative = false ) {
+	public function getDomainInfo( $domain ) {
 		$url      = "{$this->endPoint}/domain/domains/{$domain}";
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response, $associative );
+		return $response;
 	}
 
-	public function getTransferInfo( $domain, $associative = false ) {
+	public function getTransferInfo( $domain ) {
 		$url      = "{$this->endPoint}/domain/transferin/{$domain}";
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response, $associative );
+		return $response;
 	}
 
 	public function registerDomain( $domain, $contacts, $nameservers, $period, $additionalfields ) {
@@ -72,7 +74,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'POST', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $additionalfields ) {
@@ -100,7 +102,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'POST', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	private function generatePassword( $length = 8 ) {
@@ -179,7 +181,7 @@ class domainAPI {
 	*/
 	public function getDomainAvailability( string $domain ) {
 		$url      = "{$this->endPoint}/domain/check?name={$domain}";
-		$response = json_decode( $this->sendOrGetCached( $url, 'GET' ) );
+		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
 		return $response->products[0]->status;
@@ -202,7 +204,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -221,7 +223,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -236,7 +238,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -252,7 +254,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 
@@ -269,7 +271,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -289,7 +291,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'POST', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 
@@ -310,7 +312,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'PUT', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 
@@ -342,7 +344,7 @@ class domainAPI {
 		$response                 = $this->sendOrGetCached( $url, 'PATCH', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, [ $domain, $params ], $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 
@@ -365,7 +367,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'POST', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -382,7 +384,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'DELETE', [] );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -403,7 +405,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'PUT', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -419,7 +421,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -436,8 +438,10 @@ class domainAPI {
 			$url      = "{$this->endPoint}/domain/domains/{$domain}/livedns";
 			$response = $this->sendOrGetCached( $url, 'POST' );
 			logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
-			return json_decode( $response );
+
+			return $response;
 		}
+
 		return [];
 	}
 
@@ -453,7 +457,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -470,7 +474,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $action, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -486,7 +490,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -511,7 +515,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'PUT', $params );
 		logModuleCall( $this->registrar, __FUNCTION__, $params, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	/*
@@ -527,7 +531,7 @@ class domainAPI {
 		$response = $this->sendOrGetCached( $url, 'DELETE' );
 		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-		return json_decode( $response );
+		return $response;
 	}
 
 	private function sendOrGetCached( $url, $method = 'GET', $post = [], $timeout = 30 ) {
@@ -567,9 +571,11 @@ class domainAPI {
 		if ( in_array( $method, [ 'POST', 'PUT', 'PATCH' ] ) && 0 < count( $body ) ) {
 			curl_setopt_array( $curl, [ CURLOPT_POSTFIELDS => json_encode( $body ) ] );
 		}
-		$response = curl_exec( $curl );
-		$err      = curl_error( $curl );
+		$response = json_decode( curl_exec( $curl ) );
 		curl_close( $curl );
+		if ( GANDI_LOG_CACHE ) {
+			logModuleCall( $this->registrar, __FUNCTION__, 'HTTP ' . curl_getinfo( $curl, CURLINFO_RESPONSE_CODE ) . ' / ' . $method . ' ' . $url, 'cached: no' );
+		}
 
 		return $response;
 	}

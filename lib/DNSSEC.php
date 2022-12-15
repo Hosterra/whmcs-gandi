@@ -14,6 +14,15 @@ class DNSSEC {
 	private $keys = null;
 	private $isactivable = null;
 	private $isactivated = null;
+	private static $instance = null;
+
+	public static function instance( $apiKey, $sharingId, $domain ) {
+		if ( ! isset( self::$instance ) ) {
+			self::$instance = new self( $apiKey, $sharingId, $domain );
+		}
+
+		return self::$instance;
+	}
 
 
 	public function __construct( $apiKey, $sharingId, $domain ) {
@@ -57,7 +66,7 @@ class DNSSEC {
 						if ( ( isset( $dnskey->code ) && 200 !== (int) $dnskey->code ) || isset( $dnskey->errors ) ) {
 							continue;
 						}
-						$this->keys[] = $dnskey ;
+						$this->keys[] = $dnskey;
 					}
 				}
 				$this->isactivated = ( 0 < count( $this->keys ) );
@@ -147,9 +156,11 @@ class DNSSEC {
 					} catch ( \Exception $e ) {
 						return false;
 					}
+
 					return true;
 				}
 			}
+
 			return false;
 		} catch ( \Exception $e ) {
 			return false;
