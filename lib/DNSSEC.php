@@ -83,7 +83,8 @@ class DNSSEC {
 	*
 	*/
 	public function reset() {
-		$this->domainApi->invalidateCache( '/dnskeys' );
+		$this->domainApi->invalidateCache( '/livedns' );
+		$this->livednsApi->invalidateCache( '/keys' );
 		$this->keys        = null;
 		$this->isactivable = null;
 		$this->isactivated = null;

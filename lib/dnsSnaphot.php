@@ -34,6 +34,7 @@ class dnsSnaphot {
 	*
 	*/
 	public function reset() {
+		$this->livednsApi->invalidateCache( '/snapshots' );
 		$this->snapshots = null;
 		$this->details   = null;
 	}
