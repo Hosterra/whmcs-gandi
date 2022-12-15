@@ -11,7 +11,7 @@ If you know how to fix the bug or implement your new feature, please open an iss
 
 ## Translating Gandi Registrar for WHMCS in your language
 
-To start to translate the Gandi Registrar for WHMCS interface in your language, just use the `english.php` file located in `/resources/lang/` directory as a "template"…
+To start translating the Gandi Registrar for WHMCS interface in your language, just use the `english.php` file located in `/resources/lang/` directory as a "template"…
 
 While your translation is completed, make a Pull Request, so it can be included in the next release.
 
