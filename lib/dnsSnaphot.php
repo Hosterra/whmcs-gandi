@@ -161,6 +161,28 @@ class dnsSnaphot {
 
 	/*
 	*
+	*Delete many snapshots.
+	*
+	* @return int
+	*
+	*/
+	public function bulkdeleteNow( $ids = [] ) {
+		$count = 0;
+		foreach ( $ids as $id ) {
+			if ( str_contains( $id, '-' ) ) {
+				$response = $this->livednsApi->deleteSnapshot( $this->domain, $id );
+				if ( isset( $response->code ) && 204 !== (int) $response->code ) {
+					continue;
+				}
+				$count++;
+			}
+		}
+
+		return $count;
+	}
+
+	/*
+	*
 	*Restore a snapshot.
 	*
 	* @return bool

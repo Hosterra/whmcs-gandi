@@ -10,8 +10,9 @@ define( 'GANDI_REGISTRAR_API_VERSION', '5' );
 define( 'GANDI_REGISTRAR_VERSION', '5.0.0' );
 define( 'GANDI_RESOURCE_DIR', dirname( __FILE__ ) . '/resources/' );
 define( 'GANDI_CONTACT_TYPES', [ 'individual', 'company', 'association', 'publicbody', 'reseller' ] );
-define( 'GANDI_CALL_LONG_WAIT', 10 );       // Gandi may take some times to process API calls, so let's wait before refreshing
-define( 'GANDI_CALL_SHORT_WAIT', 3 );       // Gandi may take some times to process API calls, so let's wait before refreshing
+define( 'GANDI_CALL_LONG_WAIT', 15 );       // Gandi may take some times to process API calls, so let's wait before refreshing
+define( 'GANDI_CALL_SHORT_WAIT', 5 );       // Gandi may take some times to process API calls, so let's wait before refreshing
+define( 'GANDI_LOG_CACHE', false );
 
 
 use WHMCS\Carbon;
@@ -42,6 +43,26 @@ function gandi_MetaData() {
 		'DisplayName' => GANDI_REGISTRAR_PRODUCT_NAME . ' v' . GANDI_REGISTRAR_VERSION,
 		'APIVersion'  => '1.1',
 	];
+}
+
+/**
+ * Verify if a template file is in use.
+ *
+ * @return bool
+ */
+function gandi_IsTemplatedBy( string $template ) {
+	$test = '';
+	if ( is_array( $GLOBALS ) && array_key_exists( 'ca', $GLOBALS ) && $GLOBALS['ca'] instanceof WHMCS\ClientArea && method_exists( $GLOBALS['ca'], 'getTemplateFile' ) ) {
+		$test = $GLOBALS['ca']->getTemplateFile();
+		if ( is_scalar( $test ) ) {
+			$test = (string) $test;
+		} else {
+			$test = '';
+		}
+	}
+
+	return ( $template === $test );
+
 }
 
 /**
@@ -147,27 +168,27 @@ function gandi_NormalizeContactInput( $contact ) {
 	$items = [];
 	foreach (
 		[
-			'type' => [],
-			'orgname' => ['Organisation Name','Company Name'],
-			'given' => ['First Name'],
-			'family' => ['Last Name'],
-			'email' => ['Email', 'Email Address'],
-			'Phone' => ['Phone Number'],
-			'streetaddr' => ['Address', 'Address 1'],
-			'city' => ['City'],
-			'zip' => ['Postcode', 'ZIP', 'ZIP Code'],
-			'country' => ['Country']
+			'type'       => [],
+			'orgname'    => [ 'Organisation Name', 'Company Name' ],
+			'given'      => [ 'First Name' ],
+			'family'     => [ 'Last Name' ],
+			'email'      => [ 'Email', 'Email Address' ],
+			'Phone'      => [ 'Phone Number' ],
+			'streetaddr' => [ 'Address', 'Address 1' ],
+			'city'       => [ 'City' ],
+			'zip'        => [ 'Postcode', 'ZIP', 'ZIP Code' ],
+			'country'    => [ 'Country' ]
 		] as $key => $subst
 	) {
 		$items[ strtolower( $key ) ] = $contact[ $key ] ?? '';
 		if ( '' === $items[ strtolower( $key ) ] ) {
 			foreach ( $subst as $try ) {
-				if ( array_key_exists( $try, $contact ) && '' !== $contact[$try] ) {
-					$items[ strtolower( $key ) ] = $contact[$try];
+				if ( array_key_exists( $try, $contact ) && '' !== $contact[ $try ] ) {
+					$items[ strtolower( $key ) ] = $contact[ $try ];
 					break;
 				}
 			}
-	}
+		}
 	}
 	if ( '' === $items['orgname'] ) {
 		$items['type'] = 'individual';
@@ -286,16 +307,6 @@ function gandi_getConfigArray( $params ) {
 					'extended' => Lang::Trans( 'gandiadmin.recordset.extended' ),
 				],
 			],
-			/*'dnssec'      => [
-				'FriendlyName' => Lang::Trans( 'gandiadmin.dnssec.name' ),
-				'Type'         => 'yesno',
-				'Description'  => Lang::Trans( 'gandiadmin.dnssec.check' ),
-			],
-			'snapshot'      => [
-				'FriendlyName' => Lang::Trans( 'gandiadmin.snapshot.name' ),
-				'Type'         => 'yesno',
-				'Description'  => Lang::Trans( 'gandiadmin.snapshot.check' ),
-			],*/
 			'secprev'      => [
 				'FriendlyName' => Lang::Trans( 'gandiadmin.secprev.name' ),
 				'Type'         => 'yesno',
@@ -440,19 +451,19 @@ function gandi_GetTldPricing( $params ) {
  *
  */
 function gandi_GetContactDetails( $params ) {
-	/*highlight_string("<?php\n\$data =\n" . var_export($params, true) . ";\n?>");die();*/
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
-		$contacts = $api->getDomainContacts( $domain );
+		$info     = $api->getDomainInfo( $domain );
+		$contacts = $info->contacts ?? $api->getDomainContacts( $domain );
 
 		return [
-			'Owner'      => gandi_NormalizeContactOutput( (array) $contacts->owner ),
-			'Technical'  => gandi_NormalizeContactOutput( (array) $contacts->tech ),
-			'Billing'    => gandi_NormalizeContactOutput( (array) $contacts->bill ),
-			'Admin'      => gandi_NormalizeContactOutput( (array) $contacts->admin ),
+			'Owner'     => gandi_NormalizeContactOutput( (array) $contacts->owner ),
+			'Technical' => gandi_NormalizeContactOutput( (array) $contacts->tech ),
+			'Billing'   => gandi_NormalizeContactOutput( (array) $contacts->bill ),
+			'Admin'     => gandi_NormalizeContactOutput( (array) $contacts->admin ),
 		];
 	} catch ( \Exception $e ) {
 		return [
@@ -474,7 +485,7 @@ function gandi_GetContactDetails( $params ) {
  * @see https://developers.whmcs.com/domain-registrars/module-parameters/
  *
  */
-function gandi_SaveContactDetails(array $params) {
+function gandi_SaveContactDetails( array $params ) {
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -515,12 +526,16 @@ function gandi_SaveContactDetails(array $params) {
  *
  */
 function gandi_GetNameservers( $params ) {
+	if ( gandi_IsTemplatedBy( 'clientareadomaincontactinfo' ) ) {
+		return [];
+	}
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
 	try {
 		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
-		$request = $api->getDomainNameservers( $domain );
+		$info    = $api->getDomainInfo( $domain );
+		$request = $info->nameservers ?? $api->getDomainNameservers( $domain );
 		if ( ! is_array( $request ) ) {
 			return [
 				'success' => false
@@ -566,8 +581,8 @@ function gandi_SaveNameservers( $params ) {
 		$nameservers[] = $params['ns2'];
 	}
 	foreach ( $nameservers as $k => $v ) {
-		if ( LiveDNS::isCorrect( [$v] ) ) {
-			unset( $nameservers[$k]);
+		if ( LiveDNS::isCorrect( [ $v ] ) ) {
+			unset( $nameservers[ $k ] );
 		}
 	}
 	$nameservers = array_filter( $nameservers );
@@ -1226,19 +1241,20 @@ function gandi_Dnssec( $params ) {
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
-	$dnssec = new DNSSEC( $params['apiKey'], $params['organization'], $domain );
+	$dnssec = DNSSEC::instance( $params['apiKey'], $params['organization'], $domain );
 	if ( filter_input( INPUT_POST, 'addKey' ) ) {
 		$dnssec->enable();
 		sleep( GANDI_CALL_LONG_WAIT );
+		$dnssec->reset();
 	}
 	if ( filter_input( INPUT_POST, 'rmKey' ) ) {
 		$dnssec->disable();
 		sleep( GANDI_CALL_LONG_WAIT );
+		$dnssec->reset();
 	}
 	$rmKey  = false;
 	$addKey = false;
 	$keys   = [];
-	$dnssec->reset();
 	if ( $dnssec->isActivable() ) {
 		$desc = Lang::trans( 'gandi.dnssec.nokey' );
 		if ( $dnssec->isActivated() ) {
@@ -1259,11 +1275,11 @@ function gandi_Dnssec( $params ) {
 						'name'  => Lang::trans( 'gandi.dnssec.algorithm' ),
 						'value' => $key->algorithm ? ( 13 == $key->algorithm ? 'ECDSA Curve P-256 w/ SHA-256' : '-' ) : '-'
 					],
-					'digest' => [
+					'digest'    => [
 						'name'  => Lang::trans( 'gandi.dnssec.digest' ),
 						'value' => $digest
 					],
-					'public' => [
+					'public'    => [
 						'name'  => Lang::trans( 'gandi.dnssec.public' ),
 						'value' => $key->public_key ?? '-'
 					],
@@ -1278,9 +1294,6 @@ function gandi_Dnssec( $params ) {
 
 	return [
 		'templatefile' => 'dnssec',
-		'breadcrumb'   => [
-			'clientarea.php?action=domaindetails&domainid=' . $params['domainid'] . '&modop=custom&a=Dnssec' => 'DNSSEC',
-		],
 		'vars'         => [
 			'desc'   => $desc,
 			'rmKey'  => $rmKey,
@@ -1301,21 +1314,20 @@ function gandi_Dnssec( $params ) {
  * @return array
  */
 function gandi_Snapshot( $params ) {
-	$sld            = $params['sld'];
-	$tld            = $params['tld'];
-	$domain         = $sld . '.' . $tld;
-	$error          = null;
-	$success        = null;
-	$snaps          = [];
-	$details        = null;
-	$snapshots      = new dnsSnaphot( $params['apiKey'], $domain );
-	$sub = filter_input( INPUT_POST, 'sub' );
-	$id  = filter_input( INPUT_POST, 'snapid' );
+	$sld       = $params['sld'];
+	$tld       = $params['tld'];
+	$domain    = $sld . '.' . $tld;
+	$error     = null;
+	$success   = null;
+	$snaps     = [];
+	$details   = null;
+	$snapshots = dnsSnaphot::instance( $params['apiKey'], $domain );
+	$sub       = filter_input( INPUT_POST, 'sub' );
+	$id        = filter_input( INPUT_POST, 'snapid' );
 	if ( ! isset( $id ) ) {
-		$id  = filter_input( INPUT_GET, 'snapid' );
+		$id = filter_input( INPUT_GET, 'snapid' );
 	}
-	$ids = filter_input( INPUT_POST, 'domids' );
-	/*highlight_string("<?php\n\$data =\n" . var_export($ids, true) . ";\n?>");die();*/
+	$ids = filter_input_array( INPUT_POST )['domids'] ?? [];
 
 
 
@@ -1324,42 +1336,59 @@ function gandi_Snapshot( $params ) {
 		if ( $snapshots->takeNow( $id ) ) {
 			$success = Lang::trans( 'gandi.snapshot.createsuccess' );
 		} else {
-			$success = Lang::trans( 'gandi.snapshot.createerror' );
+			$error = Lang::trans( 'gandi.snapshot.createerror' );
 		}
+		$list = true;
 		sleep( GANDI_CALL_SHORT_WAIT );
-		$list  = true;
-		$snaps = [];
-		foreach ( $snapshots->getList() as $snap ) {
-			$snap['statustext'] = Lang::trans( 'gandi.snapshot.' . $snap['statusClass'] );
-			$snaps[] = $snap;
-		}
+		$snapshots->reset();
 	} elseif ( $sub && 'deleteSnapshot' === $sub ) {
-
+		if ( $snapshots->deleteNow( $id ) ) {
+			$success = Lang::trans( 'gandi.snapshot.deletesuccess' );
+		} else {
+			$error = Lang::trans( 'gandi.snapshot.deleteerror' );
+		}
+		$list = true;
+		sleep( GANDI_CALL_SHORT_WAIT );
+		$snapshots->reset();
+	} elseif ( $sub && 'bulkDelete' === $sub ) {
+		$count = $snapshots->bulkdeleteNow( $ids );
+		if ( 0 < $count ) {
+			$success = sprintf( Lang::trans( 'gandi.snapshot.bulkdeletesuccess' ), $count );
+		} else {
+			$error = Lang::trans( 'gandi.snapshot.bulkdeleteerror' );
+		}
+		$list = true;
+		sleep( GANDI_CALL_SHORT_WAIT );
+		$snapshots->reset();
 	} elseif ( $sub && 'restoreSnapshot' === $sub ) {
-
-	} elseif ( $list ) {
+		if ( $snapshots->restoreNow( $id ) ) {
+			$success = Lang::trans( 'gandi.snapshot.restoresuccess' );
+		} else {
+			$error = Lang::trans( 'gandi.snapshot.restoreerror' );
+		}
+		$list = true;
+	} elseif ( ! $list ) {
+		$details               = $snapshots->getDetails( $id );
+		$details['statustext'] = Lang::trans( 'gandi.snapshot.' . ( $details['status'] ?? 'error' ) );
+	}
+	if ( $list ) {
 		$snaps = [];
 		foreach ( $snapshots->getList() as $snap ) {
 			$snap['statustext'] = Lang::trans( 'gandi.snapshot.' . $snap['statusClass'] );
-			$snaps[] = $snap;
+			$snaps[]            = $snap;
 		}
-	} else {
-		$details = $snapshots->getDetails( $id );
-		$details['statustext'] = Lang::trans( 'gandi.snapshot.' . ( $details['status'] ?? 'error' ) );
 	}
 
 	return [
 		'templatefile' => 'snapshot',
-		'breadcrumb'   => [
-			'clientarea.php?action=domaindetails&domainid=' . $params['domainid'] . '&modop=custom&a=Snapshot' => 'Snapshot',
-		],
 		'vars'         => [
-			'domainid'       => $params['domainid'],
-			'list'           => $list,
-			'error'          => $error,
-			'success'        => $success,
-			'snapshots'      => $snaps,
-			'snapshot'       => $details,
+			'action'    => '/clientarea.php?action=domaindetails&modop=custom&a=Snapshot',
+			'domainid'  => $params['domainid'],
+			'list'      => $list,
+			'error'     => $error,
+			'success'   => $success,
+			'snapshots' => $snaps,
+			'snapshot'  => $details,
 
 			'SnapshotsStatuses' => [
 				[
@@ -1455,7 +1484,7 @@ function gandi_ClientArea( $params ) {
 	} catch ( \Exception $e ) {
 
 	}
-	$dnssec = new DNSSEC( $params['apiKey'], $params['organization'], $domain );
+	$dnssec = DNSSEC::instance( $params['apiKey'], $params['organization'], $domain );
 	if ( $dnssec->isActivable() ) {
 		$sec = Lang::trans( 'gandi.infopanel.dnssecno' );
 		if ( $dnssec->isActivated() ) {
@@ -1483,10 +1512,8 @@ function gandi_ClientArea( $params ) {
 }
 
 
-
-
 // HOOKS
 
-add_hook( 'ClientAreaPageDomainContacts', 1,  'gandi_ModifyContacts' );
+add_hook( 'ClientAreaPageDomainContacts', 1, 'gandi_ModifyContacts' );
 
-add_hook( 'ClientAreaPageBulkDomainManagement', 1,  'gandi_ModifyContacts' );
+add_hook( 'ClientAreaPageBulkDomainManagement', 1, 'gandi_ModifyContacts' );

@@ -35,8 +35,9 @@
             {/literal}
         });
     </script>
-    <form id="snapshotForm" method="post" action="clientarea.php?action=bulksnapshot">
-        <input id="bulkaction" name="update" type="hidden"/>
+    <form method="post" action="{$action}">
+        <input type="hidden" name="sub" value="bulkDelete"/>
+        <input type="hidden" name="domainid" value="{$domainid}"/>
         <div class="table-container loading clearfix">
             <div class="table-top">
                 <div class="d-flex" style="flex-direction: row;flex-wrap: nowrap;">
@@ -199,18 +200,47 @@
                 </div>
                 <div class="sticky-actions">
                     <div class="dropdown d-xl-none dropup">
-                        <button type="button" class="btn btn-link dropdown-toggle drop-up" data-toggle="dropdown">
+                        <button type="button" class="btn btn-link dropdown-toggle drop-up " data-toggle="dropdown">
                             {$LANG.withselected} <i class="ls ls-caret"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                            <li><a href="#" id="deleteSnapshot" class="setBulkAction"><i
+                            <li><a href="#" id="deleteSnapshot" class="need-bulkdelete-confirm"><i
                                             class="fas fa-fw fa-trash-alt"></i>{$LANG.gandi.snapshot.delete}</a></li>
                         </ul>
                     </div>
-                    <a href="#" id="deleteSnapshot" class="setBulkAction btn btn-link d-none d-xl-block">
+                    <a href="#" id="deleteSnapshot" class="need-bulkdelete-confirm btn btn-link d-none d-xl-block">
                         <i class="fas fa-fw fa-trash-alt" style="margin-right: 0!important"></i>
                         <span class="btn-text">{$LANG.gandi.snapshot.delete}</span>
                     </a>
+                </div>
+            </div>
+            <div class="modal fade" id="modalBulkdeleteConfirmation" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" >
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header hide-on-load">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            <h4 class="modal-title" id="myModalLabel">{$LANG.gandi.snapshot.areyousure}</h4>
+                        </div>
+                        <div class="modal-body">
+                            <p class="hide-on-load">{$LANG.gandi.snapshot.confirmbulkdelete}</p>
+                            <div class="loader-txt text-center show-on-load">
+                                <p>{$LANG.gandi.spinnertmessage}</p>
+                            </div>
+                            <div class="loader show-on-load">
+                                <div class="spinner" style="justify-content: center !important;">
+                                    <div class="rect1"></div>
+                                    <div class="rect2"></div>
+                                    <div class="rect3"></div>
+                                    <div class="rect4"></div>
+                                    <div class="rect5"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer hide-on-load">
+                            <button type="submit" class="btn btn-danger exec-load">{$LANG.yes}</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">{$LANG.no}</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -221,8 +251,7 @@
         <h2 class="section-title">{$LANG.gandi.snapshot.new}</h2>
         <p class="section-desc">{$LANG.gandi.snapshot.newdesc}</p>
     </div>
-    <form class="form-horizontal" method="post"
-          action="clientarea.php?action=domaindetails&domainid={$domainid}&modop=custom&a=Snapshot">
+    <form class="form-horizontal" method="post" action="{$action}">
         <input type="hidden" name="sub" value="addSnapshot"/>
         <input type="hidden" name="domainid" value="{$domainid}"/>
         <input type="text" name="snapid" value="" size="20" class="form-control"/>
@@ -292,40 +321,80 @@
 
     </div>
     <div class="section-body" style="padding-top: 40px!important;">
-    <form style="float:left;" class="form-horizontal" method="post" action="clientarea.php?action=domaindetails&domainid={$domainid}&modop=custom&a=Snapshot">
+    <form style="float:left;" class="form-horizontal" method="post" action="{$action}">
         <input type="hidden" name="sub" value="restoreSnapshot"/>
         <input type="hidden" name="domainid" value="{$domainid}"/>
         <input type="hidden" name="snapid" value="{$snapshot.id}"/>
-        <input type="submit" value="{$LANG.gandi.snapshot.restore}" class="btn btn-primary need-confirm-then-load"/>
+        <button type="button" class="btn btn-primary need-restore-confirm">{$LANG.gandi.snapshot.restore}</button>
+        <div class="modal fade" id="modalRestoreConfirmation" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" >
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header hide-on-load">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="myModalLabel">{$LANG.gandi.snapshot.areyousure}</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p class="hide-on-load">{$LANG.gandi.snapshot.confirmrestore}</p>
+                        <div class="loader-txt text-center show-on-load">
+                            <p>{$LANG.gandi.spinnertmessage}</p>
+                        </div>
+                        <div class="loader show-on-load">
+                            <div class="spinner" style="justify-content: center !important;">
+                                <div class="rect1"></div>
+                                <div class="rect2"></div>
+                                <div class="rect3"></div>
+                                <div class="rect4"></div>
+                                <div class="rect5"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer hide-on-load">
+                        <button type="submit" class="btn btn-danger exec-load">{$LANG.yes}</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">{$LANG.no}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
-    <form style="float:right;" class="form-horizontal" method="post" action="clientarea.php?action=domaindetails&domainid={$domainid}&modop=custom&a=Snapshot">
+    <form style="float:right;" class="form-horizontal" method="post" action="{$action}">
         <input type="hidden" name="sub" value="deleteSnapshot"/>
         <input type="hidden" name="domainid" value="{$domainid}"/>
         <input type="hidden" name="snapid" value="{$snapshot.id}"/>
-        <input type="submit" value="{$LANG.gandi.snapshot.delete}" class="btn btn-primary need-delete-confirm-then-load">
+        <button type="button" class="btn btn-primary need-delete-confirm">{$LANG.gandi.snapshot.delete}</button>
+        <div class="modal fade" id="modalDeleteConfirmation" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" >
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header hide-on-load">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="myModalLabel">{$LANG.gandi.snapshot.areyousure}</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p class="hide-on-load">{$LANG.gandi.snapshot.confirmdelete}</p>
+                        <div class="loader-txt text-center show-on-load">
+                            <p>{$LANG.gandi.spinnertmessage}</p>
+                        </div>
+                        <div class="loader show-on-load">
+                            <div class="spinner" style="justify-content: center !important;">
+                                <div class="rect1"></div>
+                                <div class="rect2"></div>
+                                <div class="rect3"></div>
+                                <div class="rect4"></div>
+                                <div class="rect5"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer hide-on-load">
+                        <button type="submit" class="btn btn-danger exec-load">{$LANG.yes}</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">{$LANG.no}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
         </div>
 
     {/if}
 
-
-    <div class="modal fade" id="modalDeleteConfirmation" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="myModalLabel">{$LANG.paymentMethods.areYouSure}</h4>
-                </div>
-                <div class="modal-body">
-                    <p>{$LANG.paymentMethods.deletePaymentMethodConfirm}</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger">{$LANG.yes}</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">{$LANG.no}</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="modal whmcs-modal fade" id="modalSpinner" role="dialog" tabindex="-1" style="display: none;" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -347,6 +416,7 @@
         </div>
         <script>
             $(document).ready(function () {
+                $(".show-on-load").hide();
                 $(".need-load").on("click", function (e) {
                     $("#modalSpinner").modal({
                         backdrop: "static",
@@ -354,16 +424,21 @@
                         show: true
                     });
                 });
-                $(".need-delete-confirm-then-load").on("click", function (e) {
+                $(".exec-load").on("click", function (e) {
+                    $(".hide-on-load").hide();
+                    $(".show-on-load").show();
+                });
+                $(".need-delete-confirm").on("click", function (e) {
                     e.preventDefault();
-                    if ( $("#modalDeleteConfirmation").modal('show') ) {
-                        $("#modalSpinner").modal({
-                            backdrop: "static",
-                            keyboard: false,
-                            show: true
-                        });
-                    }
-
+                    $("#modalDeleteConfirmation").modal('show');
+                });
+                $(".need-bulkdelete-confirm").on("click", function (e) {
+                    e.preventDefault();
+                    $("#modalBulkdeleteConfirmation").modal('show');
+                });
+                $(".need-restore-confirm").on("click", function (e) {
+                    e.preventDefault();
+                    $("#modalRestoreConfirmation").modal('show');
                 });
             });
         </script>

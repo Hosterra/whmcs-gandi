@@ -15,6 +15,7 @@ Use Gandi.net as registrar in WHMCS.
 - Name servers management: **_supported_**
 - DNNSEC operations: **_supported_** (only zsk)
 - DNS records creation, update and deletion: **_supported_**
+- DNS snapshots creation, restoration and deletion: **_supported_** (experimental)
 - DNS ttl management: **_supported_** (needs template customization)
 - Extended DNS record types: **_supported_** (needs template customization)
 - WHOIS privacy protection: **_supported_** (see following note about ID Protect)
