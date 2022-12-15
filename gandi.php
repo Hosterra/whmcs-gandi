@@ -1330,7 +1330,6 @@ function gandi_Snapshot( $params ) {
 	$ids = filter_input_array( INPUT_POST )['domids'] ?? [];
 
 
-
 	$list = ! $snapshots->isValid( $id );
 	if ( $sub && 'addSnapshot' === $sub ) {
 		if ( $snapshots->takeNow( $id ) ) {
@@ -1420,21 +1419,6 @@ function gandi_ClientAreaCustomButtonArray() {
 	];
 }
 
-/**
- * Client Area Allowed Functions.
- *
- * Only the functions defined within this function or the Client Area
- * Custom Button Array can be invoked by client level users.
- *
- * @return array
- */
-function agandi_ClientAreaAllowedFunctions() {
-	return [
-		'snapshot' => 'Snapshot',
-		'DNSSEC'   => 'Dnssec',
-	];
-}
-
 
 /**
  * Client Area Output.
@@ -1458,7 +1442,6 @@ function gandi_ClientArea( $params ) {
 	$idprotect = Lang::trans( 'gandi.infopanel.idprotectyes' );
 	$lock      = Lang::trans( 'gandi.infopanel.noinfo' );
 	$dns       = Lang::trans( 'gandi.infopanel.noinfo' );
-	$sec       = Lang::trans( 'gandi.infopanel.noinfo' );
 	try {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
 		$response = $api->getDomainInfo( $domain );
