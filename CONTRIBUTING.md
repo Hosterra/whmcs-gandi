@@ -9,6 +9,12 @@ If you'd like to do it, start by searching through the [issues](https://github.c
 
 If you know how to fix the bug or implement your new feature, please open an issue first to discuss it before submitting a pull request - unless it is a small fix (in which case you can do so directly).
 
+## Translating Gandi Registrar for WHMCS in your language
+
+To start to translate the Gandi Registrar for WHMCS interface in your language, just use the `english.php` file located in `/resources/lang/` directory as a "template"…
+
+While your translation is completed, make a Pull Request, so it can be included in the next release.
+
 > ### _Community_
 > _Discussions about Gandi Registrar for WHMCS take place on this repository's [discussions](https://github.com/Hosterra/whmcs-gandi/discussions) section. Anybody is welcome to join these conversations._
 > 
