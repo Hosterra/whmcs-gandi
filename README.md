@@ -33,6 +33,12 @@ Use Gandi.net as registrar in WHMCS.
 5. Activate the addon in the **_Setup->Domain Registrars_** section of WHMCS admin.
 
 ## How to configure
+In the **_Setup->Domain Registrars_** section of WHMCS admin, you have access to the following settings:
+- _API key_: set it your own, personal, API key for Gandi APIs.
+- _Organization_: select the organization to which domains operations will be billed.
+- _DNS to use_: if you choose Gandi Live DNS, all domain registrations will specify Gandi LiveDNS as DNS and all DNSSEC and snapshots options will be available to your customers (see note below).
+- _DNS record types_: choose extended to take full advantage of Gandi LiveDNS (needs template customization)
+- _Security, privacy & performance_: check to display a summary in the domain details page of the client area.
 
 > 💡️️ Gandi Registrar for WHMCS allows you to delegate your DNS handling to Gandi LiveDNS. To do so, you have to select "Gandi LiveDNS" in this module settings and have `livedns.gandi.net` as default name servers in WHMCS main domains config. Note `livedns.gandi.net` is not an existing host, it's just the easiest way to fill some gaps in the WHMCS APIs.
 
