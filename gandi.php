@@ -869,6 +869,7 @@ function gandi_SaveDNS( $params ) {
 				];
 			}
 		}
+		$liveDns->invalidateCache( '/records' );
 
 		return [
 			'success' => 'success',
