@@ -244,6 +244,21 @@ function gandi_ModifyContacts( $vars ) {
 }
 
 /**
+ * Perfom post process after registration or inbound transfer
+ *
+ * @return array
+ */
+function gandi_DomainPostProcess( $vars ) {
+	if ( $vars['domainid'] ) {
+		$Domain = Domain::find( $vars['domainid'] );
+		if ( $Domain ) {
+			$Domain->hasDnsManagement = true;
+			$Domain->save();
+		}
+	}
+}
+
+/**
  * Define registrar configuration options.
  *
  * The values you return here define what configuration options
@@ -1500,3 +1515,9 @@ function gandi_ClientArea( $params ) {
 add_hook( 'ClientAreaPageDomainContacts', 1, 'gandi_ModifyContacts' );
 
 add_hook( 'ClientAreaPageBulkDomainManagement', 1, 'gandi_ModifyContacts' );
+
+add_hook( 'AfterRegistrarRegistration', 1, 'gandi_DomainPostProcess' );
+
+add_hook( 'AfterRegistrarTransfer', 1, 'gandi_DomainPostProcess' );
+
+
