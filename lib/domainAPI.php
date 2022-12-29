@@ -166,7 +166,7 @@ class domainAPI {
 			'BL',
 			'WF'
 		] ) ) {
-			$owner['state']   = 'FR-' . $owner['country'];
+			//$owner['state']   = 'FR-' . $owner['country'];
 			$owner['country'] = 'FR';
 		}
 		if ( isset( $languages_mapping[ $contacts['owner']['language'] ] ) ) {
