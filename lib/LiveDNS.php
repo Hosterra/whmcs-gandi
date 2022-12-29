@@ -3,7 +3,7 @@
 namespace WHMCS\Module\Registrar\Gandi;
 
 class LiveDNS {
-	const ENDPOINT = 'https://api.gandi.net/v5/livedns/';
+	const ENDPOINT = 'https://api.gandi.net/v5/livedns';
 	private $apiKey;
 	private $registrar = GANDI_REGISTRAR_PRODUCT_NAME;
 	private static $cache = [];
