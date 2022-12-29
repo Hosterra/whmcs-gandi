@@ -249,11 +249,11 @@ function gandi_ModifyContacts( $vars ) {
  * @return array
  */
 function gandi_DomainPostProcess( $vars ) {
-	if ( $vars['domainid'] ) {
-		$Domain = Domain::find( $vars['domainid'] );
-		if ( $Domain ) {
-			$Domain->hasDnsManagement = true;
-			$Domain->save();
+	if ( $vars['params']['domain'] ) {
+		$domain = iDomain::where( 'domain', $vars['params']['domain'] )->first();
+		if ( $domain ) {
+			$domain->hasDnsManagement = true;
+			$domain->save();
 		}
 	}
 }
@@ -287,6 +287,13 @@ function gandi_getConfigArray( $params ) {
 					$organizationsList[ $organization->id ] = $organization->name;
 				}
 			}
+			$templateList = [];
+			$templates    = $api->getTemplates();
+			if ( is_array( $templates ) ) {
+				foreach ( $templates as $template ) {
+					$templatesList[ $template->id ] = $template->name;
+				}
+			}
 		} catch ( Exception $e ) {
 			// How/where to log?
 		}
@@ -305,6 +312,16 @@ function gandi_getConfigArray( $params ) {
 				'FriendlyName' => Lang::Trans( 'gandiadmin.organization' ),
 				'Type'         => 'dropdown',
 				'Options'      => $organizationsList,
+			],
+			'registertemplate' => [
+				'FriendlyName' => Lang::Trans( 'gandiadmin.registertemplate' ),
+				'Type'         => 'dropdown',
+				'Options'      => $templatesList,
+			],
+			'transfertemplate' => [
+				'FriendlyName' => Lang::Trans( 'gandiadmin.transfertemplate' ),
+				'Type'         => 'dropdown',
+				'Options'      => $templatesList,
 			],
 			'dns'          => [
 				'FriendlyName' => Lang::Trans( 'gandiadmin.dns.name' ),
@@ -1120,7 +1137,7 @@ function gandi_RegisterDomain( $params ) {
 				'error' => $availability
 			];
 		}
-		$response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [] );
+		$response = $api->registerDomain( $domain, $contacts, $nameservers, $registrationPeriod, $params['additionalfields'] ?? [], $params['registertemplate'] );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )
@@ -1187,7 +1204,7 @@ function gandi_TransferDomain( $params ) {
 	];
 	try {
 		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
-		$response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [] );
+		$response = $api->transferDomain( $domain, $contacts, $nameservers, $registrationPeriod, $authCode, $params['additionalfields'] ?? [], $params['transfertemplate'] );
 		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
 			return [
 				'error' => json_encode( $response )

@@ -15,7 +15,8 @@ Use Gandi.net as registrar in WHMCS.
 - Name servers management: **_supported_**
 - DNNSEC operations: **_supported_** (only zsk)
 - DNS records creation, update and deletion: **_supported_**
-- DNS snapshots creation, restoration and deletion: **_supported_** (experimental)
+- DNS templates for registration and transfer: **_supported_**
+- DNS snapshots creation, restoration and deletion: **_supported_**
 - DNS ttl management: **_supported_** (needs template customization)
 - Extended DNS record types: **_supported_** (needs template customization)
 - WHOIS privacy protection: **_supported_** (see following note about ID Protect)
@@ -36,6 +37,7 @@ Use Gandi.net as registrar in WHMCS.
 In the **_Setup->Domain Registrars_** section of WHMCS admin, you have access to the following settings:
 - _API key_: set it your own, personal, API key for Gandi APIs.
 - _Organization_: select the organization to which domains operations will be billed.
+- _Registration / transfer templates_: chose the DNS templates to apply after registration / transfer success (these templates are set in your gandi reseler account).
 - _DNS to use_: if you choose Gandi Live DNS, all domain registrations will specify Gandi LiveDNS as DNS and all DNSSEC and snapshots options will be available to your customers (see note below).
 - _DNS record types_: choose extended to take full advantage of Gandi LiveDNS (needs template customization)
 - _Security, privacy & performance_: check to display a summary in the domain details page of the client area.

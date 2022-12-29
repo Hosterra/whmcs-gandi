@@ -50,12 +50,13 @@ class domainAPI {
 		return $response;
 	}
 
-	public function registerDomain( $domain, $contacts, $nameservers, $period, $additionalfields ) {
+	public function registerDomain( $domain, $contacts, $nameservers, $period, $additionalfields, $template ) {
 		$url          = "{$this->endPoint}/domain/domains";
 		$params       = [
-			'fqdn'     => $domain,
-			'duration' => $period,
-			'owner'    => (object) $this->generateOwner( $contacts, $additionalfields )
+			'fqdn'        => $domain,
+			'duration'    => $period,
+			'owner'       => (object) $this->generateOwner( $contacts, $additionalfields ),
+			'template_id' => $template
 		];
 		$domainextras = SpecialFields::getDomain( $additionalfields );
 		if ( 0 < count( $domainextras ) ) {
@@ -77,12 +78,13 @@ class domainAPI {
 		return $response;
 	}
 
-	public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $additionalfields ) {
+	public function transferDomain( $domain, $contacts, $nameservers, $period, $authCode, $additionalfields, $template ) {
 		$url          = "{$this->endPoint}/domain/transferin";
 		$params       = [
 			'fqdn'     => $domain,
 			'duration' => $period,
 			'owner'    => (object) $this->generateOwner( $contacts, $additionalfields ),
+			'template_id' => $template,
 			'authinfo' => $authCode
 		];
 		$domainextras = SpecialFields::getDomain( $additionalfields );
@@ -478,6 +480,23 @@ class domainAPI {
 		$url      = "{$this->endPoint}/billing/price/domain?processes={$action}";
 		$response = $this->sendOrGetCached( $url, 'GET' );
 		logModuleCall( $this->registrar, __FUNCTION__, $action, $response );
+
+		return $response;
+	}
+
+	/*
+	*
+	* Get TLD prices
+	*
+	* Available actions: add,create,remove,release,activate,deactivate,renew,restore,transfer,change_owner,transfer_reseller,update,delete
+	*
+	* @return array
+	*
+	*/
+	public function getTemplates() {
+		$url      = "{$this->endPoint}/template/templates";
+		$response = $this->sendOrGetCached( $url, 'GET' );
+		logModuleCall( $this->registrar, __FUNCTION__, '<null>', $response );
 
 		return $response;
 	}
