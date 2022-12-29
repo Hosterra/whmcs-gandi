@@ -129,20 +129,25 @@ class domainAPI {
 			$legaltype = $additionalfields['x-gandi-legal-type'];
 		}
 		$owner         = [
-			'city'            => $contacts['owner']['city'],
-			'orgname'         => $contacts['owner']['orgname'],
-			'given'           => $contacts['owner']['firstname'],
-			'family'          => $contacts['owner']['lastname'],
-			'zip'             => $contacts['owner']['postcode'],
-			'country'         => $contacts['owner']['countrycode'],
-			'streetaddr'      => $contacts['owner']['address'],
-			'phone'           => $contacts['owner']['phonenumberformatted'],
-			'state'           => $contacts['owner']['state'],
+			'country'         => empty( $contacts['owner']['countrycode'] ) ? 'FR' : $contacts['owner']['countrycode'],
+			'email'           => empty( $contacts['owner']['email'] ) ? 'unknown@example.com' : $contacts['owner']['email'],
+			'family'          => empty( $contacts['owner']['lastname'] ) ? 'unspecified' : $contacts['owner']['lastname'],
+			'given'           => empty( $contacts['owner']['firstname'] ) ? 'unspecified' : $contacts['owner']['firstname'],
+			'streetaddr'      => empty( $contacts['owner']['address'] ) ? 'unspecified' : $contacts['owner']['address'],
+			'orgname'         => empty( $contacts['owner']['orgname'] ) ? 'unspecified' : $contacts['owner']['orgname'],
 			'type'            => $legaltype,
-			'email'           => $contacts['owner']['email'],
 			'data_obfuscated' => true,  // Forces ID Protect
 			'mail_obfuscated' => true,  // Forces ID Protect
 		];
+		if ( ! empty( $contacts['owner']['city'] ) ) {
+			$owner['city'] = $contacts['owner']['city'];
+		}
+		if ( ! empty( $contacts['owner']['postcode'] ) ) {
+			$owner['zip'] = $contacts['owner']['postcode'];
+		}
+		if ( ! empty( $contacts['owner']['phonenumberformatted'] ) ) {
+			$owner['phone'] = $contacts['owner']['phonenumberformatted'];
+		}
 		$contactextras = SpecialFields::getContact( $additionalfields );
 		if ( 0 < count( $contactextras ) ) {
 			$owner['extra_parameters'] = $contactextras;
