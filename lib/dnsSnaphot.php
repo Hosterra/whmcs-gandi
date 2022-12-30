@@ -54,7 +54,7 @@ class dnsSnaphot {
 				$s                 = [];
 				$s['id']           = $snap->id;
 				$s['name']         = $snap->name;
-				$s['date']         = Carbon::parse( $snap->created_at )->format( 'Y-m-d H:m:i' );
+				$s['date']         = Carbon::parse( $snap->created_at )->format( 'Y-m-d H:i:s' );
 				$s['statusClass']  = $snap->automatic ? 'auto' : 'manual';
 				$this->snapshots[] = $s;
 			}
@@ -74,11 +74,11 @@ class dnsSnaphot {
 		$current = [
 			'id'          => '-',
 			'name'        => '-',
-			'date'        => Carbon::createFromTimestamp( 1 )->format( 'Y-m-d H:m:i' ),
+			'date'        => Carbon::createFromTimestamp( 1 )->format( 'Y-m-d H:i:s' ),
 			'statusClass' => 'auto'
 		];
 		foreach ( $this->getList() as $snapshot ) {
-			if ( Carbon::createFromFormat( 'Y-m-d H:m:i', $current['date'] )->timestamp < Carbon::createFromFormat( 'Y-m-d H:m:i', $snapshot['date'] )->timestamp ) {
+			if ( Carbon::createFromFormat( 'Y-m-d H:i:s', $current['date'] )->timestamp < Carbon::createFromFormat( 'Y-m-d H:i:s', $snapshot['date'] )->timestamp ) {
 				$current = $snapshot;
 			}
 		}
@@ -136,7 +136,7 @@ class dnsSnaphot {
 				$result['status'] = $snap['automatic'] ? 'auto' : 'manual';
 			}
 			if ( array_key_exists( 'created_at', $snap ) ) {
-				$result['date'] = Carbon::parse( $snap['created_at'] )->format( 'Y-m-d H:m:i' );
+				$result['date'] = Carbon::parse( $snap['created_at'] )->format( 'Y-m-d H:i:s' );
 			}
 			if ( array_key_exists( 'zone_data', $snap ) ) {
 				$result['zone_data'] = $snap['zone_data'];
