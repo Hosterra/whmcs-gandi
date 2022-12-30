@@ -482,6 +482,7 @@ function gandi_GetTldPricing( $params ) {
  *
  */
 function gandi_GetContactDetails( $params ) {
+	gandi_GetElement( $params, 'domain' );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -748,6 +749,7 @@ function gandi_SaveRegistrarLock( $params ) {
  *
  */
 function gandi_GetEPPCode( $params ) {
+	gandi_GetElement( $params, 'domain' );
 	$sld    = $params['sld'];
 	$tld    = $params['tld'];
 	$domain = $sld . '.' . $tld;
@@ -808,6 +810,7 @@ function gandi_ResendIRTPVerificationEmail( $params ) {
  *
  */
 function gandi_GetDNS( $params ) {
+	gandi_GetElement( $params, 'domain' );
 	$filename = GANDI_RESOURCE_DIR . 'dns/recordtypes.php';
 	if ( file_exists( $filename ) ) {
 		include $filename;
@@ -1447,6 +1450,39 @@ function gandi_Snapshot( $params ) {
 }
 
 /**
+ * Get element information.
+ *
+ * Define constant GANDI_ELEMENTS if not existing, then return info.
+ *
+ * @return mixed
+ */
+function gandi_GetElement( $params, $element ) {
+	if ( ! defined( 'GANDI_ELEMENTS' ) ) {
+		$sld       = $params['sld'];
+		$tld       = $params['tld'];
+		$domain    = $sld . '.' . $tld;
+		try {
+			$api      = new domainAPI( $params['apiKey'], $params['organization'] );
+			$response = $api->getDomainInfo( $domain );
+			if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+				throw new \Exception( 'Information not available' );
+			}
+		} catch ( \Exception $e ) {
+			$response = null;
+		}
+		$dnssec = DNSSEC::instance( $params['apiKey'], $params['organization'], $domain );
+		define( 'GANDI_ELEMENTS', [
+			'domain' => $response,
+			'dnssec' => $dnssec,
+		]);
+	}
+	if ( array_key_exists( $element, GANDI_ELEMENTS ) ) {
+		return GANDI_ELEMENTS[$element];
+	}
+	return null;
+}
+
+/**
  * Client Area Custom Button Array.
  *
  * Allows you to define additional actions your module supports.
@@ -1485,15 +1521,13 @@ function gandi_ClientArea( $params ) {
 	$idprotect = Lang::trans( 'gandi.infopanel.idprotectyes' );
 	$lock      = Lang::trans( 'gandi.infopanel.noinfo' );
 	$dns       = Lang::trans( 'gandi.infopanel.noinfo' );
-	try {
-		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
-		$response = $api->getDomainInfo( $domain );
-		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
-			throw new \Exception( 'Information not available' );
-		}
+	$lockable  = true;
+	$response = gandi_GetElement( $params, 'domain' );
+	if ( isset( $response ) ) {
 		if ( is_array( $response->status ) ) {
 			if ( ! $response->can_tld_lock ) {
 				$lock = Lang::trans( 'gandi.infopanel.locknono' );
+				$lockable = false;
 			} elseif ( in_array( 'clientTransferProhibited', $response->status ) ) {
 				$lock = Lang::trans( 'gandi.infopanel.lockyes' );
 			} else {
@@ -1507,24 +1541,20 @@ function gandi_ClientArea( $params ) {
 				$dns = Lang::trans( 'gandi.dns.external' );
 			}
 		}
-	} catch ( \Exception $e ) {
-
 	}
-	$dnssec = DNSSEC::instance( $params['apiKey'], $params['organization'], $domain );
-	if ( $dnssec->isActivable() ) {
-		$sec = Lang::trans( 'gandi.infopanel.dnssecno' );
-		if ( $dnssec->isActivated() ) {
-			$sec = Lang::trans( 'gandi.infopanel.dnssecyes' );
+	$dnssec = gandi_GetElement( $params, 'dnssec' );
+	if ( isset( $dnssec ) ) {
+		if ( $dnssec->isActivable() ) {
+			$sec = Lang::trans( 'gandi.infopanel.dnssecno' );
+			if ( $dnssec->isActivated() ) {
+				$sec = Lang::trans( 'gandi.infopanel.dnssecyes' );
+			}
+		} else {
+			$sec = Lang::trans( 'gandi.infopanel.dnssecnono' );
 		}
-	} else {
-		$sec = Lang::trans( 'gandi.infopanel.dnssecnono' );
 	}
-	if ( ! defined( 'GANDI_ELEMENTS' ) ) {
-		define( 'GANDI_ELEMENTS', [
-			'domain' => $response,
-			'dnssec' => $dnssec,
-		]);
-	}
+	global $smarty;
+	$smarty->assign('lockable', $lockable );
 	$output = '<div class="panel panel-default">';
 	$output .= ' <div class="panel-heading"><h3 class="panel-title">' . Lang::trans( 'gandi.infopanel.secprev' ) . '</h3></div>';
 	$output .= ' <ul class="list-info list-info-50 list-info-bordered">';
