@@ -619,10 +619,21 @@ function gandi_SaveNameservers( $params ) {
 	}
 	$nameservers = array_filter( $nameservers );
 	try {
-		$api = new domainAPI( $params['apiKey'], $params['organization'] );
+		$api       = new domainAPI( $params['apiKey'], $params['organization'] );
+		$snapshots = dnsSnaphot::instance( $params['apiKey'], $domain );
+		$test      = (array) $api->getLiveDNSInfo( $domain );
 		if ( 'livedns' === $params['dns'] && LiveDNS::isCorrect( $nameservers ) ) {
 			$request = $api->enableLiveDNS( $domain );
+			if ( 'livedns' !== ( $test['current'] ?? '-' ) ) {
+				$snap = $snapshots->getMostRecent();
+				if ( '-' !== $snap['id'] ) {
+					$snapshots->restoreNow( $snap['id'] );
+				}
+			}
 		} else {
+			if ( 'livedns' === ( $test['current'] ?? '-' ) ) {
+				$snapshots->takeNow();
+			}
 			$request = $api->updateDomainNameservers( $domain, $nameservers );
 		}
 		if ( ( isset( $request->code ) && $request->code != 202 && $request->code != 409 ) || isset( $request->errors ) ) {

@@ -440,16 +440,11 @@ class domainAPI {
 	*
 	*/
 	public function enableLiveDNS( string $domain ) {
-		$test = (array) $this->getLiveDNSInfo( $domain );
-		if ( 'livedns' !== ( $test['current'] ?? '-' ) ) {
-			$url      = "{$this->endPoint}/domain/domains/{$domain}/livedns";
-			$response = $this->sendOrGetCached( $url, 'POST' );
-			logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
+		$url      = "{$this->endPoint}/domain/domains/{$domain}/livedns";
+		$response = $this->sendOrGetCached( $url, 'POST' );
+		logModuleCall( $this->registrar, __FUNCTION__, $domain, $response );
 
-			return $response;
-		}
-
-		return [];
+		return $response;
 	}
 
 	/*

@@ -65,6 +65,29 @@ class dnsSnaphot {
 
 	/*
 	*
+	* Get the most recent snapshot.
+	*
+	* @return array
+	*
+	*/
+	public function getMostRecent() {
+		$current = [
+			'id'          => '-',
+			'name'        => '-',
+			'date'        => Carbon::createFromTimestamp( 1 )->format( 'Y-m-d H:m:i' ),
+			'statusClass' => 'auto'
+		];
+		foreach ( $this->getList() as $snapshot ) {
+			if ( Carbon::createFromFormat( 'Y-m-d H:m:i', $current['date'] )->timestamp < Carbon::createFromFormat( 'Y-m-d H:m:i', $snapshot['date'] )->timestamp ) {
+				$current = $snapshot;
+			}
+		}
+
+		return $current;
+	}
+
+	/*
+	*
 	* Verify if an ID exist
 	*
 	* @return bool
