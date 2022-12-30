@@ -27,6 +27,7 @@ use WHMCS\Module\Registrar\Gandi\LiveDNS;
 use WHMCS\Module\Registrar\Gandi\ERRPolicy;
 use WHMCS\Module\Registrar\Gandi\DNSSEC;
 use WHMCS\Module\Registrar\Gandi\dnsSnaphot;
+use WHMCS\View\Menu\Item as MenuItem;
 
 require_once dirname( __FILE__ ) . '/lib/LiveDNS.php';
 
@@ -245,8 +246,6 @@ function gandi_ModifyContacts( $vars ) {
 
 /**
  * Perfom post process after registration or inbound transfer
- *
- * @return array
  */
 function gandi_DomainPostProcess( $vars ) {
 	if ( $vars['params']['domain'] ) {
@@ -1519,6 +1518,12 @@ function gandi_ClientArea( $params ) {
 		}
 	} else {
 		$sec = Lang::trans( 'gandi.infopanel.dnssecnono' );
+	}
+	if ( ! defined( 'GANDI_ELEMENTS' ) ) {
+		define( 'GANDI_ELEMENTS', [
+			'domain' => $response,
+			'dnssec' => $dnssec,
+		]);
 	}
 	$output = '<div class="panel panel-default">';
 	$output .= ' <div class="panel-heading"><h3 class="panel-title">' . Lang::trans( 'gandi.infopanel.secprev' ) . '</h3></div>';
