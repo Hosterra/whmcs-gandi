@@ -632,7 +632,7 @@ function gandi_SaveNameservers( $params ) {
 			}
 		} else {
 			if ( 'livedns' === ( $test['current'] ?? '-' ) ) {
-				$snapshots->takeNow();
+				$snapshots->takeNow( 'NS switching' );
 			}
 			$request = $api->updateDomainNameservers( $domain, $nameservers );
 		}
