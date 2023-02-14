@@ -6,11 +6,11 @@
     {if $addKey}
         <div class="section-body">
             <p class="section-desc">{$LANG.gandi.dnssec.activation}</p>
-            <form method="post" action="clientarea.php?action=domaindetails">
+            <form method="post" action="clientarea.php?action=domaindetails" id="frmDNSSECToggle">
                 <input type="hidden" name="domainid" value="{$domainid}" />
                 <input type="hidden" name="modop" value="custom" />
                 <input type="hidden" name="a" value="Dnssec" />
-                <input type="submit" name="addKey" value="{$LANG.gandi.dnssec.enable}" class="btn btn-primary need-load"/>
+                <button href="#" type="submit" name="addKey" value="{$LANG.gandi.dnssec.enable}" class="btn btn-primary need-load">{$LANG.gandi.dnssec.enable}</button>
             </form>
         </div>
     {/if}
@@ -28,11 +28,11 @@
                 </div>
             {/foreach}
             <p class="section-desc">{$LANG.gandi.dnssec.deactivation}</p>
-            <form method="post" action="clientarea.php?action=domaindetails">
+            <form method="post" action="clientarea.php?action=domaindetails" id="frmDNSSECToggle">
                 <input type="hidden" name="domainid" value="{$domainid}" />
                 <input type="hidden" name="modop" value="custom" />
                 <input type="hidden" name="a" value="Dnssec" />
-                <input type="submit" name="rmKey" value="{$LANG.gandi.dnssec.disable}" class="btn btn-primary need-load"/>
+                <button href="#" type="submit" name="rmKey" value="{$LANG.gandi.dnssec.disable}" class="btn btn-primary need-load">{$LANG.gandi.dnssec.disable}</button>
             </form>
         </div>
     {/if}
@@ -62,6 +62,9 @@
                         backdrop: "static",
                         keyboard: false,
                         show: true
+                    });
+                    $('#modalSpinner').on('shown.bs.modal', function (e) {
+                        $('#frmDNSSECToggle').submit();
                     });
                 });
             });

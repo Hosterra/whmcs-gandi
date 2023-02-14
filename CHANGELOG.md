@@ -8,5 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - A global constant `GANDI_ELEMENTS` is now defined to propagate domain information in hooks.
 - A smarty `{$lockable}` variable is now assigned for domain details templates: boolean value indicating if TLD supports registrar locking.
 
+### Changed
+- The modal boxes are now compatible with Safari.
+
 ## [5.0.0] - 2022-12-30
 Initial release, starting at 5.0.0 to match supported Gandi API version. 

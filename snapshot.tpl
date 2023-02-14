@@ -251,12 +251,12 @@
         <h2 class="section-title">{$LANG.gandi.snapshot.new}</h2>
         <p class="section-desc">{$LANG.gandi.snapshot.newdesc}</p>
     </div>
-    <form class="form-horizontal" method="post" action="{$action}">
+    <form id="createForm" class="form-horizontal" method="post" action="{$action}">
         <input type="hidden" name="sub" value="addSnapshot"/>
         <input type="hidden" name="domainid" value="{$domainid}"/>
         <input type="text" name="snapid" value="" size="20" class="form-control"/>
         <div class="form-actions">
-            <input type="submit" value="{$LANG.gandi.snapshot.create}" class="btn btn-primary need-load"/>
+            <a href="#" type="submit" value="{$LANG.gandi.snapshot.create}" class="btn btn-primary need-load">{$LANG.gandi.snapshot.create}</a>
         </div>
 
     </form>
@@ -395,8 +395,8 @@
 
     {/if}
 
-    <div class="modal whmcs-modal fade" id="modalSpinner" role="dialog" tabindex="-1" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog">
+    <div class="modal fade" id="modalSpinner" role="dialog" tabindex="-1" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-body text-center">
                     <div class="loader-txt">
@@ -422,6 +422,9 @@
                         backdrop: "static",
                         keyboard: false,
                         show: true
+                    });
+                    $('#modalSpinner').on('shown.bs.modal', function (e) {
+                        $('#createForm').submit();
                     });
                 });
                 $(".exec-load").on("click", function (e) {
