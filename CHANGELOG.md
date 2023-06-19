@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - A smarty `{$lockable}` variable is now assigned for domain details templates: boolean value indicating if TLD supports registrar locking.
 
 ### Changed
+- DNS records updates are now done via PUT verb (full zone replacement) which is faster.
+- TXT records with same names are now allowed.
 - The modal boxes are now compatible with Safari.
 
 ## [5.0.0] - 2022-12-30

@@ -74,15 +74,13 @@ class LiveDNS {
 
 	/*
 	*
-	* Create a LiveDNS record.
+	* Format a LiveDNS record.
 	*
 	* @param string $domain
-	* @param array $record
 	* @return array
 	*
 	*/
-	public function addRecord( string $domain, $record ) {
-		$url    = $this::ENDPOINT . "/domains/{$domain}/records";
+	private function formatRecord( $record ) {
 		$params = [
 			'rrset_name' => $record['hostname'],
 			'rrset_type' => $record['type'],
@@ -95,7 +93,76 @@ class LiveDNS {
 		} else {
 			$params['rrset_values'] = [ $record['address'] ];
 		}
+
+		return $params;
+	}
+
+	/*
+	*
+	* Normalizes TXT LiveDNS records.
+	*
+	* @param string $domain
+	* @return array
+	*
+	*/
+	private function normalizeTXTRecords( $records ) {
+		$params = [];
+		$txts   = [];
+		foreach ( $records as $record ) {
+			if ( 'TXT' !== $record['rrset_type'] ) {
+				$params[] = $record;
+			} else {
+				if ( array_key_exists( $record['rrset_type'], $txts ) && is_array( $txts[ $record['rrset_type'] ] ) ) {
+					$txts[ $record['rrset_type'] ]['rrset_values'][] = $record['rrset_values'][0];
+				} else {
+					$txts[ $record['rrset_type'] ] = $record;
+				}
+			}
+		}
+		foreach ( $txts as $txt ) {
+			$params[] = $txt;
+		}
+
+		return $params;
+	}
+
+	/*
+	*
+	* Create a LiveDNS record.
+	*
+	* @param string $domain
+	* @param array $record
+	* @return array
+	*
+	*/
+	public function addRecord( string $domain, $record ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/records";
+		$params = $this->formatRecord( $record );
 		$response = $this->sendOrGetCached( $url, "POST", $params );
+		logModuleCall( $this->registrar, __FUNCTION__, [ $domain, $params ], $response );
+
+		return $response;
+	}
+
+	/*
+	*
+	* Create LiveDNS records.
+	*
+	* @param string $domain
+	* @param array $records
+	* @return array
+	*
+	*/
+	public function addRecords( string $domain, $records ) {
+		$url    = $this::ENDPOINT . "/domains/{$domain}/records";
+		$items  = [];
+		foreach ( $records as $record ) {
+			if ( ! empty( $record['address'] ) ) {
+				$items[] = $this->formatRecord( $record );
+			}
+		}
+		$params = [ 'items' => $this->normalizeTXTRecords( $items ) ];
+		$response = $this->sendOrGetCached( $url, "PUT", $params );
 		logModuleCall( $this->registrar, __FUNCTION__, [ $domain, $params ], $response );
 
 		return $response;

@@ -884,7 +884,7 @@ function gandi_SaveDNS( $params ) {
 		$whmcsRecords = $params['dnsrecords'];
 		$liveDns      = new LiveDNS( $params['apiKey'] );
 		$gandiRecords = $liveDns->getLiveDnsRecords( $domain );
-		foreach ( $whmcsRecords as $index => $whmcsRecord ) {
+		/*foreach ( $whmcsRecords as $index => $whmcsRecord ) {
 			if ( is_array( $gandiRecords ) && isset( $gandiRecords[ $index ] ) ) {
 				$entryToDelete = $gandiRecords[ $index ];
 				$liveDns->deleteRecord( $domain, $entryToDelete );
@@ -898,7 +898,15 @@ function gandi_SaveDNS( $params ) {
 					'error' => "LiveDNS not enabled",
 				];
 			}
+		}*/
+
+		$response = $liveDns->addRecords( $domain, $whmcsRecords );
+		if ( 404 === $response->code ) {
+			return [
+				'error' => "LiveDNS not enabled",
+			];
 		}
+
 		$liveDns->invalidateCache( '/records' );
 
 		return [
