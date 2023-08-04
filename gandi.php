@@ -883,23 +883,6 @@ function gandi_SaveDNS( $params ) {
 	try {
 		$whmcsRecords = $params['dnsrecords'];
 		$liveDns      = new LiveDNS( $params['apiKey'] );
-		$gandiRecords = $liveDns->getLiveDnsRecords( $domain );
-		/*foreach ( $whmcsRecords as $index => $whmcsRecord ) {
-			if ( is_array( $gandiRecords ) && isset( $gandiRecords[ $index ] ) ) {
-				$entryToDelete = $gandiRecords[ $index ];
-				$liveDns->deleteRecord( $domain, $entryToDelete );
-			}
-			if ( '' === $whmcsRecord['hostname'] ) {
-				continue;
-			}
-			$response = $liveDns->addRecord( $domain, $whmcsRecord );
-			if ( 404 === $response->code ) {
-				return [
-					'error' => "LiveDNS not enabled",
-				];
-			}
-		}*/
-
 		$response = $liveDns->addRecords( $domain, $whmcsRecords );
 		if ( 404 === $response->code ) {
 			return [
