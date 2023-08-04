@@ -99,13 +99,13 @@ class LiveDNS {
 
 	/*
 	*
-	* Normalizes TXT LiveDNS records.
+	* Normalizes LiveDNS records.
 	*
 	* @param string $domain
 	* @return array
 	*
 	*/
-	private function normalizeTXTRecords( $records ) {
+	private function normalizeRecords( $records ) {
 		$recs = [];
 		foreach ( $records as $record ) {
 			if ( array_key_exists( $record['rrset_type'], $recs ) && is_array( $recs[ $record['rrset_type'] ] ) &&
@@ -164,7 +164,7 @@ class LiveDNS {
 				$items[] = $this->formatRecord( $record );
 			}
 		}
-		$params = [ 'items' => $this->normalizeTXTRecords( $items ) ];
+		$params = [ 'items' => $this->normalizeRecords( $items ) ];
 		$response = $this->sendOrGetCached( $url, "PUT", $params );
 		logModuleCall( $this->registrar, __FUNCTION__, [ $domain, $params ], $response );
 

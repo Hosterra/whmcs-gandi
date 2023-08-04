@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [5.1.0] - Not Yet Released
 ### Added
+- Management of multivalued records.
 - A global constant `GANDI_ELEMENTS` is now defined to propagate domain information in hooks.
 - A smarty `{$lockable}` variable is now assigned for domain details templates: boolean value indicating if TLD supports registrar locking.
 
