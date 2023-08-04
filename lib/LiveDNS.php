@@ -106,22 +106,25 @@ class LiveDNS {
 	*
 	*/
 	private function normalizeTXTRecords( $records ) {
-		$params = [];
-		$txts   = [];
+		$recs = [];
 		foreach ( $records as $record ) {
-			if ( 'TXT' !== $record['rrset_type'] ) {
-				$params[] = $record;
+			if ( array_key_exists( $record['rrset_type'], $recs ) && is_array( $recs[ $record['rrset_type'] ] ) &&
+			     array_key_exists( $record['rrset_name'], $recs[ $record['rrset_type'] ] ) && is_array( $recs[ $record['rrset_type'] ][ $record['rrset_name'] ] ) ) {
+				$recs[ $record['rrset_type'] ][ $record['rrset_name'] ]['rrset_values'][] = $record['rrset_values'][0];
 			} else {
-				if ( array_key_exists( $record['rrset_type'], $txts ) && is_array( $txts[ $record['rrset_type'] ] ) ) {
-					$txts[ $record['rrset_type'] ]['rrset_values'][] = $record['rrset_values'][0];
-				} else {
-					$txts[ $record['rrset_type'] ] = $record;
+				if ( ! is_array( $recs[ $record['rrset_type'] ] ) ) {
+					$recs[ $record['rrset_type'] ] = [];
 				}
+				$recs[ $record['rrset_type'] ][ $record['rrset_name'] ] = $record;
 			}
 		}
-		foreach ( $txts as $txt ) {
-			$params[] = $txt;
+		$params = [];
+		foreach ( $recs as $type ) {
+			foreach ( $type as $name ) {
+				$params[] = $name;
+			}
 		}
+		logModuleCall( $this->registrar, __FUNCTION__, 'processed records', $params );
 
 		return $params;
 	}
