@@ -3,6 +3,10 @@ All notable changes to **Gandi Registrar for WHMCS** are documented in this *cha
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and **Gandi Registrar for WHMCS** adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.1] - Not Yet Released
+### Fixed
+- Fixes wrong registration min duration for domain having discount.
+
 ## [5.1.0] - 2023-08-04
 ### Added
 - Management of multivalued records.

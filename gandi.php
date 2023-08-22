@@ -89,8 +89,10 @@ function gandi_GetTLDs( $params, $action ) {
 				foreach ( $product->prices as $price ) {
 					switch ( $action ) {
 						case 'create':
-							if ( 'golive' === (string) $price->options->phase && ! $price->discount ) {
-								$p    = max( $p, (float) $price->price_before_taxes );
+							if ( 'golive' === (string) $price->options->phase ) {
+								if ( ! $price->discount ) {
+									$p = max( $p, (float) $price->price_before_taxes );
+								}
 								$minY = min( $minY, $price->min_duration );
 								$maxY = max( $maxY, $price->max_duration );
 							}
@@ -119,6 +121,57 @@ function gandi_GetTLDs( $params, $action ) {
 		return [];
 	}
 }
+/*function gandi_GetTLDs( $params, $action ) {
+	try {
+		$api      = new domainAPI( $params['apiKey'], $params['organization'] );
+		$response = $api->getTLDPrices( $action );
+		if ( ( isset( $response->code ) && 202 !== (int) $response->code ) || isset( $response->errors ) ) {
+			return [];
+		}
+		$result                     = [];
+		$result['misc']['currency'] = (string) $response->currency;
+		$result['tlds']             = [];
+		foreach ( $response->products as $product ) {
+			if ( 'available' === (string) $product->status ) {
+				$p    = 9999999.0;
+				$minY = 10;
+				$maxY = 1;
+				foreach ( $product->prices as $price ) {
+					switch ( $action ) {
+						case 'create':
+							if ( 'golive' === (string) $price->options->phase ) {
+								$p    = min( $p, (float) $price->price_before_taxes );
+								$minY = min( $minY, $price->min_duration );
+								$maxY = max( $maxY, $price->max_duration );
+								if ( $price->discount ) {
+									break;
+								}
+							}
+							break;
+						case 'renew':
+						case 'transfer':
+						case 'restore':
+							if ( ! $price->discount ) {
+								$p = min( $p, (float) $price->price_before_taxes );
+							}
+							break;
+					}
+				}
+				if ( 0.0 < $p && 9999999.0 !== $p ) {
+					$result['tlds'][ $product->name ][ $action ] = $p;
+					if ( 'create' === $action ) {
+						$result['tlds'][ $product->name ]['minY'] = $minY;
+						$result['tlds'][ $product->name ]['maxY'] = $maxY;
+					}
+				}
+			}
+		}
+
+		return $result;
+	} catch ( \Exception $e ) {
+		return [];
+	}
+}*/
 
 /**
  * Clean and normalize contact for outputting it
