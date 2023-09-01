@@ -1516,8 +1516,9 @@ function gandi_GetElement( $params, $element ) {
 		}
 		$dnssec = DNSSEC::instance( $params['apiKey'], $params['organization'], $domain );
 		define( 'GANDI_ELEMENTS', [
-			'domain' => $response,
-			'dnssec' => $dnssec,
+			'domain'   => $response,
+			'dnssec'   => $dnssec,
+			'external' => ! LiveDNS::isCorrect( $response->nameservers ),
 		]);
 	}
 	if ( array_key_exists( $element, GANDI_ELEMENTS ) ) {
