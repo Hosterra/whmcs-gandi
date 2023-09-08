@@ -447,8 +447,12 @@ function gandi_CheckAvailability( $params ) {
 	try {
 		$results = new LookupResultsList();
 		$sld     = $params['sld'];
+		$tlds    = $params['tlds'];
+		if ( '.careers' === (string) last( $tlds ) ) {
+			array_pop( $tlds );
+		}
 		$api     = new domainAPI( $params['apiKey'], $params['organization'] );
-		foreach ( $params['tlds'] as $tld ) {
+		foreach ( $tlds as $tld ) {
 			$tld          = str_replace( '.', '', $tld );
 			$searchResult = new SearchResult( $sld, $tld );
 			$domain       = $sld . '.' . $tld;
@@ -458,14 +462,15 @@ function gandi_CheckAvailability( $params ) {
 			} else {
 				$status = SearchResult::STATUS_REGISTERED;
 			}
+			//$status = SearchResult::STATUS_TLD_NOT_SUPPORTED;
 			$searchResult->setStatus( $status );
 			$results->append( $searchResult );
 		}
-
-		return $results;
 	} catch ( \Exception $e ) {
-		return new LookupResultsList();
+		$results = new LookupResultsList();
 	}
+
+	return $results;
 }
 
 /**
