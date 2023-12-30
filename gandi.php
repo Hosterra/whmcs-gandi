@@ -1524,9 +1524,9 @@ function gandi_GetElement( $params, $element ) {
 			'domain'   => $response,
 			'dnssec'   => $dnssec,
 			'external' => ! LiveDNS::isCorrect( $response->nameservers ),
-		]);
+		] );
 	}
-	if ( array_key_exists( $element, GANDI_ELEMENTS ) ) {
+	if ( defined( 'GANDI_ELEMENTS' ) && array_key_exists( $element, GANDI_ELEMENTS ) ) {
 		return GANDI_ELEMENTS[$element];
 	}
 	return null;
